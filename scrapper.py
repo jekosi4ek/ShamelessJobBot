@@ -3,16 +3,11 @@ import schedule
 import requests
 import sqlalchemy
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 import os
-import chromedriver_autoinstaller
-
+from playwright.sync_api import sync_playwright
 
 LOGIN_URL = "https://shameless.sinch.cz/"
 SCRAPE_URL = "https://shameless.sinch.cz/react/position"
@@ -20,14 +15,11 @@ EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
 
 # --- SQLAlchemy setup ---
-# Connection parameters
-
-# connection
 conn_str = os.getenv("DB_URL") or os.getenv("DATABASE_URL")
 if not conn_str:
     raise ValueError("No DB_URL or DATABASE_URL found in environment")
-engine = sqlalchemy.create_engine(conn_str)
 
+engine = sqlalchemy.create_engine(conn_str)
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine)
 
@@ -35,6 +27,7 @@ class Position(Base):
     __tablename__ = "positions"
     _schema = os.getenv("DB_SCHEMA")
     __table_args__ = {"schema": _schema} if _schema else {}
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     pozice = Column(String(255))
     datum = Column(String(50))
@@ -43,7 +36,6 @@ class Position(Base):
     profese = Column(String(255))
     obsazenost = Column(String(50))
     scrape_time = Column(DateTime, default=datetime.utcnow)
-
 
 Base.metadata.create_all(engine)
 
@@ -60,88 +52,73 @@ def send_to_telegram(message: str):
     except Exception as e:
         print("Telegram error:", e)
 
-def login_with_credentials():
-    # автоматично встановить правильний chromedriver
-    chromedriver_autoinstaller.install()
+def scrape_page():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")          # обов'язково для Railway
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+        # --- Login ---
+        page.goto(LOGIN_URL)
+        page.fill("#UserEmail", EMAIL)
+        page.fill("#UserPassword", PASSWORD)
+        page.click("input[data-cy='sign-in-btn']")
+        page.wait_for_timeout(5000)
+        print("Logged in successfully!")
 
-    driver = webdriver.Chrome(options=options)
+        # --- Scrape ---
+        page.goto(SCRAPE_URL)
+        page.wait_for_timeout(3000)
 
-    driver.get(LOGIN_URL)
-    wait = WebDriverWait(driver, 10)
+        soup = BeautifulSoup(page.content(), "html.parser")
+        table = soup.find("table", class_="MuiTable-root")
+        if not table:
+            print("No table found.")
+            browser.close()
+            return
 
-    email_input = wait.until(EC.presence_of_element_located((By.ID, "UserEmail")))
-    email_input.send_keys(EMAIL)
+        rows = table.find("tbody").find_all("tr", class_="MuiTableRow-root")
+        with SessionLocal() as db:
+            for row in rows:
+                cells = row.find_all("td")
+                if not cells:
+                    continue
 
-    password_input = driver.find_element(By.ID, "UserPassword")
-    password_input.send_keys(PASSWORD)
+                pozice = cells[0].get_text(strip=True)
+                datum = cells[1].get_text(strip=True)
+                cas = cells[2].get_text(strip=True)
+                misto = cells[3].get_text(strip=True)
+                profese = cells[4].get_text(strip=True)
+                obsazenost = cells[5].get_text(strip=True)
 
-    login_button = driver.find_element(By.XPATH, "//input[@data-cy='sign-in-btn']")
-    login_button.click()
-
-    time.sleep(5)
-    print("Logged in successfully!")
-    return driver
-
-def scrape_page(driver):
-    driver.get(SCRAPE_URL)
-    time.sleep(3)
-
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    table = soup.find("table", class_="MuiTable-root")
-    if not table:
-        print("No table found.")
-        return
-
-    rows = table.find("tbody").find_all("tr", class_="MuiTableRow-root")
-    with SessionLocal() as db:
-        for row in rows:
-            cells = row.find_all("td")
-            if not cells:
-                continue
-
-            pozice = cells[0].get_text(strip=True)
-            datum = cells[1].get_text(strip=True)
-            cas = cells[2].get_text(strip=True)
-            misto = cells[3].get_text(strip=True)
-            profese = cells[4].get_text(strip=True)
-            obsazenost = cells[5].get_text(strip=True)
-
-            existing = db.query(Position).filter_by(
-                pozice=pozice, datum=datum, cas=cas,
-                misto=misto, profese=profese, obsazenost=obsazenost
-            ).first()
-
-            if not existing:
-                new_pos = Position(
+                existing = db.query(Position).filter_by(
                     pozice=pozice, datum=datum, cas=cas,
                     misto=misto, profese=profese, obsazenost=obsazenost
-                )
-                db.add(new_pos)
-                db.commit()
-                print(f"New record added: {pozice} | {datum} | {cas}")
+                ).first()
 
-                message = (f"📢 Нова вакансія!\n"
-                           f"Позицiя: {pozice}\n"
-                           f"Дата: {datum}\n"
-                           f"Час: {cas}\n"
-                           f"Мiсце: {misto}\n"
-                           f"Професiя: {profese}\n"
-                           f"Обiйнято: {obsazenost}")
-                send_to_telegram(message)
-    driver.quit()
-    print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
+                if not existing:
+                    new_pos = Position(
+                        pozice=pozice, datum=datum, cas=cas,
+                        misto=misto, profese=profese, obsazenost=obsazenost
+                    )
+                    db.add(new_pos)
+                    db.commit()
+                    print(f"New record added: {pozice} | {datum} | {cas}")
+
+                    message = (f"📢 Нова вакансія!\n"
+                               f"Позицiя: {pozice}\n"
+                               f"Дата: {datum}\n"
+                               f"Час: {cas}\n"
+                               f"Мiсце: {misto}\n"
+                               f"Професiя: {profese}\n"
+                               f"Обiйнято: {obsazenost}")
+                    send_to_telegram(message)
+
+        browser.close()
+        print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 # --- Main ---
-driver = login_with_credentials()
-scrape_page(driver)
-
-schedule.every(5).minutes.do(scrape_page, driver)
+scrape_page()
+schedule.every(5).minutes.do(scrape_page)
 
 while True:
     schedule.run_pending()
