@@ -90,6 +90,10 @@ def scrape_page():
 
                 pozice, datum, cas, misto, profese, obsazenost = values[:6]
 
+                # пропускаємо вакансії без дати
+                if not datum:
+                    continue
+
                 existing = db.query(Position).filter_by(
                     pozice=pozice, datum=datum, cas=cas,
                     misto=misto, profese=profese, obsazenost=obsazenost
@@ -102,7 +106,7 @@ def scrape_page():
                     )
                     db.add(new_pos)
                     db.commit()
-                    print(f"New record added: {pozice} | {datum} | {cas}")
+                    #print(f"New record added: {pozice} | {datum} | {cas}")
 
                     message = (f"📢 Нова вакансія!\n"
                                f"Позицiя: {pozice}\n"
@@ -114,6 +118,7 @@ def scrape_page():
                     send_to_telegram(message)
 
         browser.close()
+        send_to_telegram("Web Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
         print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 
