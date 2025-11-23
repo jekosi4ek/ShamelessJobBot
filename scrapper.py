@@ -118,7 +118,7 @@ def scrape_page():
                     send_to_telegram(message)
 
         browser.close()
-        send_to_telegram("Web Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
+        send_to_telegram(f"Web Scraping done at {time.strftime('%Y-%m-%d %H:%M:%S')}")
         print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 
