@@ -12,7 +12,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 import os
 import chromedriver_autoinstaller
-from selenium import webdriver
+
 
 LOGIN_URL = "https://shameless.sinch.cz/"
 SCRAPE_URL = "https://shameless.sinch.cz/react/position"
@@ -99,46 +99,42 @@ def scrape_page(driver):
         return
 
     rows = table.find("tbody").find_all("tr", class_="MuiTableRow-root")
-    db = SessionLocal()
+    with SessionLocal() as db:
+        for row in rows:
+            cells = row.find_all("td")
+            if not cells:
+                continue
 
-    for row in rows:
-        cells = row.find_all("td")
-        if not cells:
-            continue
+            pozice = cells[0].get_text(strip=True)
+            datum = cells[1].get_text(strip=True)
+            cas = cells[2].get_text(strip=True)
+            misto = cells[3].get_text(strip=True)
+            profese = cells[4].get_text(strip=True)
+            obsazenost = cells[5].get_text(strip=True)
 
-        pozice = cells[0].get_text(strip=True) if len(cells) > 0 else ""
-        datum = cells[1].get_text(strip=True) if len(cells) > 1 else ""
-        cas = cells[2].get_text(strip=True) if len(cells) > 2 else ""
-        misto = cells[3].get_text(strip=True) if len(cells) > 3 else ""
-        profese = cells[4].get_text(strip=True) if len(cells) > 4 else ""
-        obsazenost = cells[5].get_text(strip=True) if len(cells) > 5 else ""
-
-        # --- Check if record exists ---
-        existing = db.query(Position).filter_by(
-            pozice=pozice, datum=datum, cas=cas,
-            misto=misto, profese=profese, obsazenost=obsazenost
-        ).first()
-
-        if not existing:
-            new_pos = Position(
+            existing = db.query(Position).filter_by(
                 pozice=pozice, datum=datum, cas=cas,
                 misto=misto, profese=profese, obsazenost=obsazenost
-            )
-            db.add(new_pos)
-            db.commit()
-            print(f"New record added: {pozice} | {datum} | {cas}")
+            ).first()
 
-            # --- Send to Telegram ---
-            message = (f"📢 Нова вакансія!\n"
-                       f"Позицiя: {pozice}\n"
-                       f"Дата: {datum}\n"
-                       f"Час: {cas}\n"
-                       f"Мiсце: {misto}\n"
-                       f"Професiя: {profese}\n"
-                       f"Обiйнято: {obsazenost}")
-            send_to_telegram(message)
+            if not existing:
+                new_pos = Position(
+                    pozice=pozice, datum=datum, cas=cas,
+                    misto=misto, profese=profese, obsazenost=obsazenost
+                )
+                db.add(new_pos)
+                db.commit()
+                print(f"New record added: {pozice} | {datum} | {cas}")
 
-    db.close()
+                message = (f"📢 Нова вакансія!\n"
+                           f"Позицiя: {pozice}\n"
+                           f"Дата: {datum}\n"
+                           f"Час: {cas}\n"
+                           f"Мiсце: {misto}\n"
+                           f"Професiя: {profese}\n"
+                           f"Обiйнято: {obsazenost}")
+                send_to_telegram(message)
+    driver.quit()
     print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 # --- Main ---
