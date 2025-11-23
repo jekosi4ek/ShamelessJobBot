@@ -25,8 +25,8 @@ SessionLocal = sessionmaker(bind=engine)
 
 class Position(Base):
     __tablename__ = "positions"
-    _schema = os.getenv("DB_SCHEMA")
-    __table_args__ = {"schema": _schema} if _schema else {}
+    #_schema = os.getenv("DB_SCHEMA")
+    #__table_args__ = {"schema": _schema} if _schema else {}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     pozice = Column(String(255))
