@@ -11,6 +11,8 @@ from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 import os
+import chromedriver_autoinstaller
+from selenium import webdriver
 
 LOGIN_URL = "https://shameless.sinch.cz/"
 SCRAPE_URL = "https://shameless.sinch.cz/react/position"
@@ -28,7 +30,6 @@ engine = sqlalchemy.create_engine(conn_str)
 
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine)
-
 
 class Position(Base):
     __tablename__ = "positions"
@@ -50,7 +51,6 @@ Base.metadata.create_all(engine)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-
 def send_to_telegram(message: str):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": message}
@@ -60,13 +60,16 @@ def send_to_telegram(message: str):
     except Exception as e:
         print("Telegram error:", e)
 
-
 def login_with_credentials():
+    # автоматично встановить правильний chromedriver
+    chromedriver_autoinstaller.install()
+
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
+    options.add_argument("--headless")          # обов'язково для Railway
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+
     driver = webdriver.Chrome(options=options)
 
     driver.get(LOGIN_URL)
@@ -84,7 +87,6 @@ def login_with_credentials():
     time.sleep(5)
     print("Logged in successfully!")
     return driver
-
 
 def scrape_page(driver):
     driver.get(SCRAPE_URL)
@@ -138,7 +140,6 @@ def scrape_page(driver):
 
     db.close()
     print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
-
 
 # --- Main ---
 driver = login_with_credentials()
