@@ -21,15 +21,21 @@ PASSWORD = os.getenv("PASSWORD")
 # Connection parameters
 
 # connection
-conn_str = os.getenv("DB_URL")
+conn_str = os.getenv("DB_URL") or os.getenv("DATABASE_URL")
+if not conn_str:
+    raise ValueError("No DB_URL or DATABASE_URL found in environment")
+engine = sqlalchemy.create_engine(conn_str)
+
 
 engine = sqlalchemy.create_engine(conn_str)
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine)
 
 class Position(Base):
-    tbl = os.getenv("DB_TABLE", "positions")
-    schema = os.getenv("DB_SCHEMA", None)
+    __tablename__ = os.getenv("DB_TABLE", "positions")
+    schema = os.getenv("DB_SCHEMA")
+    __table_args__ = {"schema": schema} if schema else {}
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     pozice = Column(String(255))
     datum = Column(String(50))
@@ -38,6 +44,7 @@ class Position(Base):
     profese = Column(String(255))
     obsazenost = Column(String(50))
     scrape_time = Column(DateTime, default=datetime.utcnow)
+
 
 Base.metadata.create_all(engine)
 
@@ -56,8 +63,8 @@ def send_to_telegram(message: str):
 
 def login_with_credentials():
     options = webdriver.ChromeOptions()
-    ##options.add_argument("--headless") # disable this line
-    options.add_argument("--start-maximized") ##to show logiin
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     driver = webdriver.Chrome(options=options)
@@ -89,7 +96,7 @@ def scrape_page(driver):
         return
 
     rows = table.find("tbody").find_all("tr", class_="MuiTableRow-root")
-    db = SessionLocal()
+    with SessionLocal() as db:
 
     for row in rows:
         cells = row.find_all("td")
