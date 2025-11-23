@@ -83,12 +83,12 @@ def scrape_page():
                 if not cells:
                     continue
 
-                pozice = cells[0].get_text(strip=True)
-                datum = cells[1].get_text(strip=True)
-                cas = cells[2].get_text(strip=True)
-                misto = cells[3].get_text(strip=True)
-                profese = cells[4].get_text(strip=True)
-                obsazenost = cells[5].get_text(strip=True)
+                # універсальний підхід: завжди 6 значень
+                values = [c.get_text(strip=True) for c in cells]
+                while len(values) < 6:
+                    values.append("")  # доповнюємо пустими
+
+                pozice, datum, cas, misto, profese, obsazenost = values[:6]
 
                 existing = db.query(Position).filter_by(
                     pozice=pozice, datum=datum, cas=cas,
@@ -115,6 +115,7 @@ def scrape_page():
 
         browser.close()
         print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
+
 
 # --- Main ---
 scrape_page()
