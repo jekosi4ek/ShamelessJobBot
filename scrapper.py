@@ -26,16 +26,14 @@ if not conn_str:
     raise ValueError("No DB_URL or DATABASE_URL found in environment")
 engine = sqlalchemy.create_engine(conn_str)
 
-
-engine = sqlalchemy.create_engine(conn_str)
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine)
 
-class Position(Base):
-    __tablename__ = os.getenv("DB_TABLE", "positions")
-    schema = os.getenv("DB_SCHEMA")
-    __table_args__ = {"schema": schema} if schema else {}
 
+class Position(Base):
+    __tablename__ = "positions"
+    _schema = os.getenv("DB_SCHEMA")
+    __table_args__ = {"schema": _schema} if _schema else {}
     id = Column(Integer, primary_key=True, autoincrement=True)
     pozice = Column(String(255))
     datum = Column(String(50))
@@ -52,6 +50,7 @@ Base.metadata.create_all(engine)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
+
 def send_to_telegram(message: str):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": message}
@@ -60,6 +59,7 @@ def send_to_telegram(message: str):
         print("Sent to Telegram:", message)
     except Exception as e:
         print("Telegram error:", e)
+
 
 def login_with_credentials():
     options = webdriver.ChromeOptions()
@@ -85,6 +85,7 @@ def login_with_credentials():
     print("Logged in successfully!")
     return driver
 
+
 def scrape_page(driver):
     driver.get(SCRAPE_URL)
     time.sleep(3)
@@ -96,7 +97,8 @@ def scrape_page(driver):
         return
 
     rows = table.find("tbody").find_all("tr", class_="MuiTableRow-root")
-    with SessionLocal() as db:
+    db = SessionLocal()
+
     for row in rows:
         cells = row.find_all("td")
         if not cells:
@@ -136,6 +138,7 @@ def scrape_page(driver):
 
     db.close()
     print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
+
 
 # --- Main ---
 driver = login_with_credentials()
