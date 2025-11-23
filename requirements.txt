@@ -5,3 +5,5 @@ python-dotenv
 selenium
 beautifulsoup4
 schedule
+chromedriver-autoinstaller
+
