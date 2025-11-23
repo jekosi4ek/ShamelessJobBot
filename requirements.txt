@@ -1,6 +1,6 @@
 requests
 sqlalchemy
-pyodbc
+psycopg2-binary
 python-dotenv
 selenium
 beautifulsoup4
