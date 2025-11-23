@@ -97,7 +97,6 @@ def scrape_page(driver):
 
     rows = table.find("tbody").find_all("tr", class_="MuiTableRow-root")
     with SessionLocal() as db:
-
     for row in rows:
         cells = row.find_all("td")
         if not cells:
