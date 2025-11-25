@@ -1,2 +1,3 @@
-worker: playwright install --with-deps && python scrapper.py
+worker: python scrapper.py
+
 
