@@ -1,6 +1,6 @@
-playwright
 requests
 sqlalchemy
-beautifulsoup4
 psycopg2-binary
 schedule
+selenium
+python-telegram-bot
