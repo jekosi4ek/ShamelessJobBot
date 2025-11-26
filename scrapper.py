@@ -22,7 +22,10 @@ LIMIT = 100
 
 
 # --- PostgreSQL setup ---
-conn_str = os.getenv(DATABASE_URL)  # формат: postgresql://user:pass@host:port/dbname
+conn_str = os.getenv("DATABASE_URL")  # формат: postgresql://user:pass@host:port/dbname
+if not conn_str:
+    raise RuntimeError("❌ DATABASE_URL is not set. Please configure environment variable.")
+
 engine = sqlalchemy.create_engine(conn_str)
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine)
