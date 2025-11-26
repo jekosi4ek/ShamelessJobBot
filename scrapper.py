@@ -217,7 +217,7 @@ if __name__ == "__main__":
     scrape()
 
     # далі кожну хвилину
-    schedule.every(1).minutes.do(scrape)
+    schedule.every(3).minutes.do(scrape)
 
     while True:
         schedule.run_pending()
