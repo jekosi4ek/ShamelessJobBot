@@ -17,7 +17,7 @@ EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
 DATABASE_URL = os.getenv("DATABASE_URL")
 COOKIES_FILE = "cookies.json"
-PAGE = 2
+PAGE = 1
 LIMIT = 100
 
 
