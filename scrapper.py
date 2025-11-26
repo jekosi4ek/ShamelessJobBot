@@ -31,7 +31,7 @@ Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine)
 
 class Position(Base):
-    __tablename__ = "positions_v2"
+    __tablename__ = "positions_v3"
     id = Column(Integer, primary_key=True, autoincrement=True)
     date = Column(String(50))
     position_id = Column(Integer)
@@ -121,7 +121,7 @@ def scrape():
     with SessionLocal() as db:
         for pos_id, pos in positions.items():
             existing = db.execute(
-                sqlalchemy.text("SELECT 1 FROM positions_v2 WHERE position_id = :position_id"),
+                sqlalchemy.text("SELECT 1 FROM positions_v3 WHERE position_id = :position_id"),
                 {"position_id": pos_id}
             ).fetchone()
             if existing:
@@ -180,7 +180,7 @@ def scrape():
             }
 
             db.execute(sqlalchemy.text("""
-                INSERT INTO positions_v2 (date, position_id, name, company, company_id, working_hours, location, profession, capacity, scrapped_at)
+                INSERT INTO positions_v3 (date, position_id, name, company, company_id, working_hours, location, profession, capacity, scrapped_at)
                 VALUES (:date, :position_id, :name, :company, :company_id, :working_hours, :location, :profession, :capacity, :scrapped_at)
             """), {
                 "date": pretty["Дата"], "position_id": pretty["ID Позиції"], "name": pretty["Назва"],
