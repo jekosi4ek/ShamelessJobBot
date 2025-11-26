@@ -210,11 +210,15 @@ def scrape():
             # print(json.dumps(pretty, ensure_ascii=False, indent=4))
             # print("-" * 10)
         print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
-        # --- Run once ---
-        scrape()
 
-        schedule.every(1).minutes.do(scrape)
+# --- Запуск ---
+if __name__ == "__main__":
+    # один раз при старті
+    scrape()
 
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+    # далі кожну хвилину
+    schedule.every(1).minutes.do(scrape)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
