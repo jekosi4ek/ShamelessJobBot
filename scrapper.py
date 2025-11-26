@@ -17,8 +17,8 @@ EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
 DATABASE_URL = os.getenv("DATABASE_URL")
 COOKIES_FILE = "cookies.json"
-PAGE = 1
-LIMIT = 1000
+PAGE = 2
+LIMIT = 100
 
 
 # --- PostgreSQL setup ---
