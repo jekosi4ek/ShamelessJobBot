@@ -33,4 +33,4 @@ COPY . /app
 WORKDIR /app
 
 # Запускаємо скрипт
-CMD ["python", "scraper.py"]
+CMD ["python", "scrapper.py"]
