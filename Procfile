@@ -1,3 +1,1 @@
-worker: python scrapper.py
-
-
+worker: playwright install chromium && python scraper.py
