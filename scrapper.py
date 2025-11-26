@@ -32,8 +32,9 @@ SessionLocal = sessionmaker(bind=engine)
 
 class Position(Base):
     __tablename__ = "positions_v2"
+    id = Column(Integer, primary_key=True, autoincrement=True)
     date = Column(String(50))
-    position_id = Column(Integer, primary_key=True, autoincrement=True)
+    position_id = Column(Integer)
     name = Column(String(255))
     company = Column(String(255))
     company_id = Column(Integer)
