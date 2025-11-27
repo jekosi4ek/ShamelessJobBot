@@ -228,7 +228,7 @@ def scrape():
                 f"📅 {pretty['Дата']} ({sd_weekday_ukr})\n"
                 f"🏢 {pretty['Компанія']}\n"
                 f"⏱️ {pretty['Час']}\n"
-                f"💰 {pretty['Оплата (година)']}/h + {pretty['Оплата (фікс)']} Kč\n"
+                f"💰 {pretty['Оплата (година)']} Kč/h + {pretty['Оплата (фікс)']} Kč\n"
                 f"{maps_line}"
                 f"{pretty['Icon']} {pretty['Професія']}\n"
                 f"👥 Вільних місць: {pretty['Вільних місць з Усього']}\n"
