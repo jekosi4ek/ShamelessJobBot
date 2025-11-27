@@ -134,6 +134,7 @@ def scrape():
             if isinstance(detail_data, list):
                 continue
             entities = detail_data.get("entities", {})
+            wage = detail_data.get("result", {}).get("wage", {})
             if not isinstance(entities, dict):
                 continue
 
@@ -141,6 +142,8 @@ def scrape():
             shift = entities.get("Shift", {}).get(str(entity.get("shift")), {})
             company = entities.get("Company", {}).get(str(shift.get("company")), {})
             profession = entities.get("Profession", {}).get(str(entity.get("profession")), {})
+            wage_hour = wage.get("hour")
+            wage_fix = wage.get("fix")
             location = entities.get("Location", {}).get(str(entity.get("location")), {})
             # координати
             point = entity.get("point") or location.get("point") or {}
@@ -195,6 +198,8 @@ def scrape():
                 "ID Role": entity.get('role'),
                 "Icon": f"{ROLE_ICONS.get(entity.get('role'), entity.get('role'))}",
                 "Професія": f"{profession.get('name')} - {ROLES.get(entity.get('role'),entity.get('role'))}",
+                "Оплата (година)": wage_hour,
+                "Оплата (фікс)": wage_fix,
                 "Вільних місць з Усього": f"{entity.get('freeCapacity')}/{entity.get('totalCapacity')}",
                 "scrapped_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
             }
@@ -223,6 +228,7 @@ def scrape():
                 f"📅 {pretty['Дата']} ({sd_weekday_ukr})\n"
                 f"🏢 {pretty['Компанія']}\n"
                 f"⏱️ {pretty['Час']}\n"
+                f"💰 {pretty['Оплата (година)']}/h + {pretty['Оплата (фікс)']} Kč\n"
                 f"{maps_line}"
                 f"{pretty['Icon']} {pretty['Професія']}\n"
                 f"👥 Вільних місць: {pretty['Вільних місць з Усього']}\n"
