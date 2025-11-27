@@ -157,6 +157,12 @@ def scrape():
                 2: "Záložník",
             }
 
+            ROLE_ICONS = {
+                0: "👷",  # робітник
+                1: "🧑‍💼",  # керівник / Crewboss
+                2: "🛡️",  # резерв / Зáložník
+            }
+
             start_fmt, end_fmt, sd_fmt, hours_diff = "", "", "", None
             if start:
                 start_dt = datetime.fromisoformat(start.replace("Z", "+00:00"))
@@ -180,6 +186,8 @@ def scrape():
                 "ID Компанії": company.get("id"),
                 "Час": f"{start_fmt} - {end_fmt} ({hours_diff} h)",
                 "Локація": location.get("address"),
+                "ID Role": entity.get('role'),
+                "Icon": f"{ROLE_ICONS.get(entity.get('role'), entity.get('role'))}",
                 "Професія": f"{profession.get('name')} - {ROLES.get(entity.get('role'),entity.get('role'))}",
                 "Вільних місць з Усього": f"{entity.get('freeCapacity')}/{entity.get('totalCapacity')}",
                 "scrapped_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
@@ -205,7 +213,7 @@ def scrape():
                 f"🏢 Компанія: {pretty['Компанія']}\n"
                 f"⏱️ Час: {pretty['Час']}\n"
                 f"📍 Локація: {pretty['Локація']}\n"
-                f"👷 Професія: {pretty['Професія']}\n"
+                f"{pretty['Icon']} Професія: {pretty['Професія']}\n"
                 f"👥 Вільних місць: {pretty['Вільних місць з Усього']}\n"
                 f'🔗 <a href="{link}">Відкрити вакансію</a>'
             )
