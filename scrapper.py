@@ -208,14 +208,13 @@ def scrape():
             link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
             message = (
                 f"📢 <b>Нова вакансія!</b>\n"
+                f'🎯 <a href="{link}">{pretty["Назва"]}</a>\n'
                 f"📅 {pretty['Дата']} ({sd_weekday_ukr})\n"
-                f"🎯 {pretty['Назва']}\n"
                 f"🏢 {pretty['Компанія']}\n"
                 f"⏱️ {pretty['Час']}\n"
                 f"📍 {pretty['Локація']}\n"
                 f"{pretty['Icon']} {pretty['Професія']}\n"
                 f"👥 Вільних місць: {pretty['Вільних місць з Усього']}\n"
-                f'🔗 <a href="{link}">Відкрити вакансію</a>'
             )
 
             send_to_telegram(message, CHAT_ID)
