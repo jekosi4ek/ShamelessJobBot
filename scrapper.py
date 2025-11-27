@@ -140,9 +140,12 @@ def scrape():
             entity = entities.get("Position", {}).get(str(pos_id), {})
             shift = entities.get("Shift", {}).get(str(entity.get("shift")), {})
             company = entities.get("Company", {}).get(str(shift.get("company")), {})
-            location = entities.get("Location", {}).get(str(entity.get("location")), {})
-            point = entities.get("point", {}).get(str(entity.get("point")), {})
             profession = entities.get("Profession", {}).get(str(entity.get("profession")), {})
+            location = entities.get("Location", {}).get(str(entity.get("location")), {})
+            # координати
+            point = entity.get("point") or location.get("point") or {}
+            lat = point.get("lat")
+            lng = point.get("lng")
 
             start = entity.get("startTime")
             end = entity.get("endTime")
@@ -187,8 +190,8 @@ def scrape():
                 "ID Компанії": company.get("id"),
                 "Час": f"{start_fmt} - {end_fmt} ({hours_diff} h)",
                 "Локація": location.get("address"),
-                "Локація (lat)": point.get("lat"),
-                "Локація (lng)": point.get("lng"),
+                "Локація (lat)": lat,
+                "Локація (lng)": lng,
                 "ID Role": entity.get('role'),
                 "Icon": f"{ROLE_ICONS.get(entity.get('role'), entity.get('role'))}",
                 "Професія": f"{profession.get('name')} - {ROLES.get(entity.get('role'),entity.get('role'))}",
@@ -209,14 +212,18 @@ def scrape():
 
             # --- Повне повідомлення ---
             link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
-            maps_link = f"https://www.google.com/maps/search/?api=1&query={pretty['Локація (lat)']},{pretty['Локація (lng)']}"
+            if pretty["Локація (lat)"] and pretty["Локація (lng)"]:
+                maps_link = f"https://www.google.com/maps/search/?api=1&query={pretty['Локація (lat)']},{pretty['Локація (lng)']}"
+                maps_line = f"📍 <a href='{maps_link}'>{pretty['Локація']}</a>\n"
+            else:
+                maps_line = f"📍 {pretty['Локація']}\n"
             message = (
                 f"📢 <b>Нова вакансія!</b>\n"
                 f'🎯 <a href="{link}">{pretty["Назва"]}</a>\n'
                 f"📅 {pretty['Дата']} ({sd_weekday_ukr})\n"
                 f"🏢 {pretty['Компанія']}\n"
                 f"⏱️ {pretty['Час']}\n"
-                f"📍 <a href='{maps_link}'>{pretty['Локація']}</a>\n"
+                f"{maps_line}"
                 f"{pretty['Icon']} {pretty['Професія']}\n"
                 f"👥 Вільних місць: {pretty['Вільних місць з Усього']}\n"
             )
