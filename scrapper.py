@@ -151,6 +151,12 @@ def scrape():
                 "Thursday": "Четвер", "Friday": "П’ятниця", "Saturday": "Субота", "Sunday": "Неділя"
             }
 
+            ROLES = {
+                0: "Pracovník",
+                1: "Crewboss",
+                2: "Záložník",
+            }
+
             start_fmt, end_fmt, sd_fmt, hours_diff = "", "", "", None
             if start:
                 start_dt = datetime.fromisoformat(start.replace("Z", "+00:00"))
@@ -174,7 +180,7 @@ def scrape():
                 "ID Компанії": company.get("id"),
                 "Час": f"{start_fmt} - {end_fmt} ({hours_diff} h)",
                 "Локація": location.get("address"),
-                "Професія": profession.get("name"),
+                "Професія": f"{profession.get('name')} - {ROLES.get(entity.get('role'),entity.get('role'))}",
                 "Вільних місць з Усього": f"{entity.get('freeCapacity')}/{entity.get('totalCapacity')}",
                 "scrapped_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
             }
