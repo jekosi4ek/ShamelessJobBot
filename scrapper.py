@@ -208,12 +208,12 @@ def scrape():
             link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
             message = (
                 f"📢 <b>Нова вакансія!</b>\n"
-                f"📅 Дата: {pretty['Дата']} ({sd_weekday_ukr})\n"
-                f"🎯 Позиція: {pretty['Назва']}\n"
-                f"🏢 Компанія: {pretty['Компанія']}\n"
-                f"⏱️ Час: {pretty['Час']}\n"
-                f"📍 Локація: {pretty['Локація']}\n"
-                f"{pretty['Icon']} Професія: {pretty['Професія']}\n"
+                f"📅 {pretty['Дата']} ({sd_weekday_ukr})\n"
+                f"🎯 {pretty['Назва']}\n"
+                f"🏢 {pretty['Компанія']}\n"
+                f"⏱️ {pretty['Час']}\n"
+                f"📍 {pretty['Локація']}\n"
+                f"{pretty['Icon']} {pretty['Професія']}\n"
                 f"👥 Вільних місць: {pretty['Вільних місць з Усього']}\n"
                 f'🔗 <a href="{link}">Відкрити вакансію</a>'
             )
