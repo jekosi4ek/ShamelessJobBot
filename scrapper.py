@@ -141,6 +141,7 @@ def scrape():
             shift = entities.get("Shift", {}).get(str(entity.get("shift")), {})
             company = entities.get("Company", {}).get(str(shift.get("company")), {})
             location = entities.get("Location", {}).get(str(entity.get("location")), {})
+            point = entities.get("point", {}).get(str(entity.get("point")), {})
             profession = entities.get("Profession", {}).get(str(entity.get("profession")), {})
 
             start = entity.get("startTime")
@@ -186,6 +187,8 @@ def scrape():
                 "ID Компанії": company.get("id"),
                 "Час": f"{start_fmt} - {end_fmt} ({hours_diff} h)",
                 "Локація": location.get("address"),
+                "Локація (lat)": point.get("lat"),
+                "Локація (lng)": point.get("lng"),
                 "ID Role": entity.get('role'),
                 "Icon": f"{ROLE_ICONS.get(entity.get('role'), entity.get('role'))}",
                 "Професія": f"{profession.get('name')} - {ROLES.get(entity.get('role'),entity.get('role'))}",
@@ -206,13 +209,14 @@ def scrape():
 
             # --- Повне повідомлення ---
             link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
+            maps_link = f"https://www.google.com/maps/search/?api=1&query={pretty['Локація (lat)']},{pretty['Локація (lng)']}"
             message = (
                 f"📢 <b>Нова вакансія!</b>\n"
                 f'🎯 <a href="{link}">{pretty["Назва"]}</a>\n'
                 f"📅 {pretty['Дата']} ({sd_weekday_ukr})\n"
                 f"🏢 {pretty['Компанія']}\n"
                 f"⏱️ {pretty['Час']}\n"
-                f"📍 {pretty['Локація']}\n"
+                f"📍 <a href='{maps_link}'>{pretty['Локація']}</a>\n"
                 f"{pretty['Icon']} {pretty['Професія']}\n"
                 f"👥 Вільних місць: {pretty['Вільних місць з Усього']}\n"
             )
