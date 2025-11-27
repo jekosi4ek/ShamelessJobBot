@@ -218,27 +218,28 @@ def scrape():
             db.commit()
 
             # --- Повне повідомлення ---
-            link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
-            if pretty["Локація (lat)"] and pretty["Локація (lng)"]:
-                maps_link = f"https://www.google.com/maps/search/?api=1&query={pretty['Локація (lat)']},{pretty['Локація (lng)']}"
-                maps_line = f"📍 <a href='{maps_link}'>{pretty['Локація']}</a>\n"
-            else:
-                maps_line = f"📍 {pretty['Локація']}\n"
-            message = (
-                f"📢 <b>Нова вакансія!</b>\n"
-                f'🎯 <a href="{link}">{pretty["Назва"]}</a>\n'
-                f"📅 {pretty['Дата']} ({sd_weekday_ukr})\n"
-                f"🏢 {pretty['Компанія']}\n"
-                f"⏱️ {pretty['Час']}\n"
-                f"💰 {pretty['Оплата (година)']} Kč/h + {pretty['Оплата (фікс)']} Kč\n"
-                f"{maps_line}"
-                f"{pretty['Icon']} {pretty['Професія']}\n"
-                f"👥 Вільних місць: {pretty['Вільних місць з Усього']}\n"
-            )
+            if pretty['ID Role'] != 2:
+                link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
+                if pretty["Локація (lat)"] and pretty["Локація (lng)"]:
+                    maps_link = f"https://www.google.com/maps/search/?api=1&query={pretty['Локація (lat)']},{pretty['Локація (lng)']}"
+                    maps_line = f"📍 <a href='{maps_link}'>{pretty['Локація']}</a>\n"
+                else:
+                    maps_line = f"📍 {pretty['Локація']}\n"
+                message = (
+                    f"📢 <b>Нова вакансія!</b>\n"
+                    f'🎯 <a href="{link}">{pretty["Назва"]}</a>\n'
+                    f"📅 {pretty['Дата']} ({sd_weekday_ukr})\n"
+                    f"🏢 {pretty['Компанія']}\n"
+                    f"⏱️ {pretty['Час']}\n"
+                    f"💰 {pretty['Оплата (година)']} Kč/h + {pretty['Оплата (фікс)']} Kč\n"
+                    f"{maps_line}"
+                    f"{pretty['Icon']} {pretty['Професія']}\n"
+                    f"👥 Вільних місць: {pretty['Вільних місць з Усього']}\n"
+                )
 
-            send_to_telegram(message, CHAT_ID)
-            if str(pretty["ID Компанії"]) == "555":
-                send_to_telegram(message, CHAT_ID_PARTY)
+                send_to_telegram(message, CHAT_ID)
+                if str(pretty["ID Компанії"]) == "555":
+                    send_to_telegram(message, CHAT_ID_PARTY)
 
             # print(json.dumps(pretty, ensure_ascii=False, indent=4))
             # print("-" * 10)
@@ -250,7 +251,7 @@ if __name__ == "__main__":
     scrape()
 
     # далі кожну хвилину
-    schedule.every(3).minutes.do(scrape)
+    schedule.every(1).minutes.do(scrape)
 
     while True:
         schedule.run_pending()
