@@ -134,7 +134,7 @@ def scrape():
             if isinstance(detail_data, list):
                 continue
             entities = detail_data.get("entities", {})
-            wage = detail_data.get("result", {}).get("wage", {})
+            wage = detail_data.get("result", {}).get("wage", {}) if isinstance(detail_data, dict) else {}
             if not isinstance(entities, dict):
                 continue
 
