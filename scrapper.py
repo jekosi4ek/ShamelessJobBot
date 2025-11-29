@@ -48,7 +48,6 @@ class Position(Base):
     wage_fix = Column(Integer)
     scrapped_at = Column(DateTime, default=datetime.utcnow)
 
-
 Base.metadata.create_all(engine)
 
 # --- Telegram ---
