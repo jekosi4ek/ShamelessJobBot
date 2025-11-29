@@ -33,7 +33,7 @@ SessionLocal = sessionmaker(bind=engine)
 class Position(Base):
     __tablename__ = "positions_v4"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    date = Column(DATE)
+    date = Column(Date)
     position_id = Column(Integer, unique=True, nullable=False)
     name = Column(String(255))
     company = Column(String(255))
