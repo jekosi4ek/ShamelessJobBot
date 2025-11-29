@@ -6,7 +6,7 @@ import schedule
 import asyncio
 from datetime import datetime
 import sqlalchemy
-from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Date, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 from playwright.async_api import async_playwright
 
