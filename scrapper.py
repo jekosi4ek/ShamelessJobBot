@@ -294,7 +294,19 @@ def scrape():
                     :scrapped_at)
                 ON CONFLICT (position_id) DO UPDATE
                 SET
-
+                    date = EXCLUDED.date,
+                    name = EXCLUDED.name,
+                    company = EXCLUDED.company,
+                    company_id = EXCLUDED.company_id,
+                    working_hours = EXCLUDED.working_hours,
+                    location = EXCLUDED.location,
+                    role_id = EXCLUDED.role_id,
+                    profession = EXCLUDED.profession,
+                    free_capacity = EXCLUDED.free_capacity,
+                    total_capacity = EXCLUDED.total_capacity,
+                    wage_hour = EXCLUDED.wage_hour,
+                    wage_fix = EXCLUDED.wage_fix,
+                    scrapped_at = EXCLUDED.scrapped_at;
             """), {
                 "date": pretty["Дата"],
                 "position_id": pretty["ID Позиції"],
