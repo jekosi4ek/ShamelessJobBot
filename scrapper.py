@@ -278,7 +278,7 @@ def scrape():
                     scrapped_at
                 )
                 VALUES (
-                    :date, 
+                    to_date(:date, 'DD.MM.YYYY'), 
                     :position_id, 
                     :name, 
                     :company, 
