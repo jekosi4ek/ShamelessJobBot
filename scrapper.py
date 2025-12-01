@@ -228,7 +228,7 @@ def scrape():
             prev_capacity = prev_capacity_row[0] if prev_capacity_row else None
 
             # визначаємо статус
-            if prev_capacity is None:
+            if prev_capacity is None and new_free_capacity > 0:
                 status_text = "Нова вакансія"
             elif prev_capacity == 0 and new_free_capacity > 0:
                 status_text = "Перевідкрита вакансія"
