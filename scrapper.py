@@ -188,14 +188,14 @@ def scrape():
 
             start_fmt, end_fmt, sd_fmt, hours_diff = "", "", "", None
             if start:
-                start_dt = datetime.fromisoformat(start.replace("Z", "+00:00"))
+                start_dt = datetime.fromisoformat(start)
                 start_dt = start_dt.astimezone(LOCAL_TZ)
                 start_fmt = start_dt.strftime("%H:%M")
                 sd_fmt = start_dt.strftime("%d.%m.%Y")
                 sd_weekday_en = start_dt.strftime("%A")
                 sd_weekday_cz = CZ_WEEKDAYS.get(sd_weekday_en, sd_weekday_en)
             if end:
-                end_dt = datetime.fromisoformat(end.replace("Z", "+00:00"))
+                end_dt = datetime.fromisoformat(end)
                 end_dt = end_dt.astimezone(LOCAL_TZ)
                 end_fmt = end_dt.strftime("%H:%M")
                 hours_diff = (end_dt - start_dt).total_seconds() / 3600
