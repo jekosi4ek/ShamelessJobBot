@@ -229,9 +229,9 @@ def scrape():
 
             # визначаємо статус
             if prev_capacity is None and new_free_capacity > 0:
-                status_text = "Нова вакансія"
+                status_text = "Nová změna"
             elif prev_capacity == 0 and new_free_capacity > 0:
-                status_text = "Перевідкрита вакансія"
+                status_text = "Znovuotevřená změna"
             else:
                 status_text = None  # не відправляємо повідомлення
 
@@ -252,7 +252,7 @@ def scrape():
                     f"💰 {pretty['Оплата (година)']} Kč/h + {pretty['Оплата (фікс)']} Kč\n"
                     f"{maps_line}"
                     f"{pretty['Icon']} {pretty['Професія']}\n"
-                    f"👥 Вільних місць: {pretty['Вільних місць з Усього']}\n"
+                    f"👥 Volná místa: {pretty['Вільних місць з Усього']}\n"
                 )
 
                 #send_to_telegram(message, CHAT_ID)
