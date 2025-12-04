@@ -19,7 +19,7 @@ PASSWORD = os.getenv("PASSWORD")
 DATABASE_URL = os.getenv("DATABASE_URL")
 COOKIES_FILE = "cookies.json"
 PAGE = 1
-LIMIT = 700
+LIMIT = 1000
 
 # --- PostgreSQL setup ---
 conn_str = DATABASE_URL  # формат: postgresql://user:pass@host:port/dbname
@@ -119,7 +119,7 @@ def scrape():
     payload_index = {
         "key": "worker/Positions/Index",
         "meta": {"page": PAGE, "limit": LIMIT},
-        "params": {"attend": True}
+        "params": {"attend": True, "ignoreCapacity": True, "ignoreRating": True}
     }
 
     resp = requests.post(API_URL, json=payload_index, headers=headers, cookies=cookies)
@@ -168,7 +168,7 @@ def scrape():
             end = entity.get("endTime")
 
             CZ_WEEKDAYS = {
-                "Monday": "pondĕlí", "Tuesday": "úterý", "Wednesday": "středa",
+                "Monday": "pondĕlí", "tuesday": "úterý", "Wednesday": "středa",
                 "Thursday": "čtvrtek", "Friday": "pátek", "Saturday": "sobota", "Sunday": "nedĕle"
             }
 
