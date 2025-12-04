@@ -130,7 +130,11 @@ def scrape():
         resp = requests.post(API_URL, json=payload_index, headers=headers, cookies=cookies)
 
     data = resp.json()
-    meta_count = data.get("entities", {}).get("meta", {}).get("count", 0)
+    meta_count = (
+            data.get("entities", {}).get("meta", {}).get("count")
+            or data.get("meta", {}).get("count")
+            or 0
+    )
     total_pages = math.ceil(meta_count / LIMIT)
 
 
