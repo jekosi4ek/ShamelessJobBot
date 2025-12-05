@@ -138,186 +138,186 @@ def scrape():
     total_pages = math.ceil(meta_count / LIMIT)
 
 
-        with SessionLocal() as db:
-            for page in range(1, total_pages + 1):
-                payload_index["meta"]["page"] = page
-                resp = requests.post(API_URL, json=payload_index, headers=headers, cookies=cookies)
-                positions = resp.json().get("entities", {}).get("Position", {})
+    with SessionLocal() as db:
+        for page in range(1, total_pages + 1):
+            payload_index["meta"]["page"] = page
+            resp = requests.post(API_URL, json=payload_index, headers=headers, cookies=cookies)
+            positions = resp.json().get("entities", {}).get("Position", {})
 
-                updates = []
-                for pos_id, pos in positions.items():
-                    # перевірка чи змінилась capacity
-                    prev_capacity_row = db.execute(sqlalchemy.text(
-                        "SELECT free_capacity FROM positions_v4 WHERE position_id = :position_id"
-                    ), {"position_id": pos_id}).fetchone()
+            updates = []
+            for pos_id, pos in positions.items():
+                # перевірка чи змінилась capacity
+                prev_capacity_row = db.execute(sqlalchemy.text(
+                    "SELECT free_capacity FROM positions_v4 WHERE position_id = :position_id"
+                ), {"position_id": pos_id}).fetchone()
 
-                    prev_capacity = prev_capacity_row[0] if prev_capacity_row else None
-                    new_capacity = pos.get("freeCapacity")
+                prev_capacity = prev_capacity_row[0] if prev_capacity_row else None
+                new_capacity = pos.get("freeCapacity")
 
-                    if prev_capacity == new_capacity:
-                        continue  # пропускаємо, якщо нічого не змінилось
+                if prev_capacity == new_capacity:
+                    continue  # пропускаємо, якщо нічого не змінилось
 
-                    # детальний запит
-                    payload_view = {"key": f"worker/Positions/View/{pos_id}", "meta": {}, "params": {"id": pos_id}}
-                    detail_resp = requests.post(API_URL, json=payload_view, headers=headers, cookies=cookies)
-                    detail_data = detail_resp.json()
+                # детальний запит
+                payload_view = {"key": f"worker/Positions/View/{pos_id}", "meta": {}, "params": {"id": pos_id}}
+                detail_resp = requests.post(API_URL, json=payload_view, headers=headers, cookies=cookies)
+                detail_data = detail_resp.json()
 
-                    # якщо це список або не dict — пропускаємо
-                    if not isinstance(detail_data, dict):
-                        print(f"⚠️ Skipping pos_id={pos_id}, API returned {type(detail_data)}")
-                        continue
+                # якщо це список або не dict — пропускаємо
+                if not isinstance(detail_data, dict):
+                    print(f"⚠️ Skipping pos_id={pos_id}, API returned {type(detail_data)}")
+                    continue
 
-                    # витягуємо wage
-                    wage = (detail_data.get("result") or {}).get("wage") or {}
-                    wage_hour = wage.get("hour")
-                    wage_fix = wage.get("fix")
+                # витягуємо wage
+                wage = (detail_data.get("result") or {}).get("wage") or {}
+                wage_hour = wage.get("hour")
+                wage_fix = wage.get("fix")
 
-                    # витягуємо entities
-                    entities = detail_data.get("entities", {})
-                    entity = entities.get("Position", {}).get(str(pos_id), {})
-                    shift = entities.get("Shift", {}).get(str(entity.get("shift")), {})
-                    company = entities.get("Company", {}).get(str(shift.get("company")), {})
-                    profession = entities.get("Profession", {}).get(str(entity.get("profession")), {})
-                    location = entities.get("Location", {}).get(str(entity.get("location")), {})
+                # витягуємо entities
+                entities = detail_data.get("entities", {})
+                entity = entities.get("Position", {}).get(str(pos_id), {})
+                shift = entities.get("Shift", {}).get(str(entity.get("shift")), {})
+                company = entities.get("Company", {}).get(str(shift.get("company")), {})
+                profession = entities.get("Profession", {}).get(str(entity.get("profession")), {})
+                location = entities.get("Location", {}).get(str(entity.get("location")), {})
 
-                    # координати
-                    point = entity.get("point") or location.get("point") or {}
-                    lat = point.get("lat")
-                    lng = point.get("lng")
+                # координати
+                point = entity.get("point") or location.get("point") or {}
+                lat = point.get("lat")
+                lng = point.get("lng")
 
-                    start = entity.get("startTime")
-                    end = entity.get("endTime")
+                start = entity.get("startTime")
+                end = entity.get("endTime")
 
-                    CZ_WEEKDAYS = {
-                        "Monday": "pondĕlí", "Tuesday": "úterý", "Wednesday": "středa",
-                        "Thursday": "čtvrtek", "Friday": "pátek", "Saturday": "sobota", "Sunday": "nedĕle"
-                    }
+                CZ_WEEKDAYS = {
+                    "Monday": "pondĕlí", "Tuesday": "úterý", "Wednesday": "středa",
+                    "Thursday": "čtvrtek", "Friday": "pátek", "Saturday": "sobota", "Sunday": "nedĕle"
+                }
 
-                    ROLES = {0: "Pracovník", 1: "Crewboss", 2: "Záložník"}
-                    ROLE_ICONS = {0: "🔧", 1: "💼", 2: "🛡️"}
-                    LOCAL_TZ = pytz.timezone("Europe/Prague")
+                ROLES = {0: "Pracovník", 1: "Crewboss", 2: "Záložník"}
+                ROLE_ICONS = {0: "🔧", 1: "💼", 2: "🛡️"}
+                LOCAL_TZ = pytz.timezone("Europe/Prague")
 
-                    start_fmt, end_fmt, sd_fmt, hours_diff = "", "", "", None
-                    if start:
-                        start_dt = datetime.fromisoformat(start).astimezone(LOCAL_TZ)
-                        start_fmt = start_dt.strftime("%H:%M")
-                        sd_fmt = start_dt.strftime("%d.%m.%Y")
-                        sd_weekday_en = start_dt.strftime("%A")
-                        sd_weekday_cz = CZ_WEEKDAYS.get(sd_weekday_en, sd_weekday_en)
-                    if end:
-                        end_dt = datetime.fromisoformat(end).astimezone(LOCAL_TZ)
-                        end_fmt = end_dt.strftime("%H:%M")
-                        hours_diff = (end_dt - start_dt).total_seconds() / 3600
+                start_fmt, end_fmt, sd_fmt, hours_diff = "", "", "", None
+                if start:
+                    start_dt = datetime.fromisoformat(start).astimezone(LOCAL_TZ)
+                    start_fmt = start_dt.strftime("%H:%M")
+                    sd_fmt = start_dt.strftime("%d.%m.%Y")
+                    sd_weekday_en = start_dt.strftime("%A")
+                    sd_weekday_cz = CZ_WEEKDAYS.get(sd_weekday_en, sd_weekday_en)
+                if end:
+                    end_dt = datetime.fromisoformat(end).astimezone(LOCAL_TZ)
+                    end_fmt = end_dt.strftime("%H:%M")
+                    hours_diff = (end_dt - start_dt).total_seconds() / 3600
 
-                    pretty = {
-                        "Дата": sd_fmt,
-                        "ID Позиції": pos_id,
-                        "Назва": shift.get("name", ""),
-                        "Компанія": company.get("name"),
-                        "ID Компанії": company.get("id"),
-                        "Час": f"{start_fmt} - {end_fmt} ({hours_diff} h)",
-                        "Локація": location.get("address"),
-                        "Локація (lat)": lat,
-                        "Локація (lng)": lng,
-                        "ID Role": entity.get('role'),
-                        "Icon": ROLE_ICONS.get(entity.get('role')),
-                        "Професія": f"{profession.get('name')} - {ROLES.get(entity.get('role'))}",
-                        "freeCapacity": entity.get('freeCapacity'),
-                        "totalCapacity": entity.get('totalCapacity'),
-                        "Вільних місць з Усього": f"{entity.get('freeCapacity')}/{entity.get('totalCapacity')}",
-                        "Оплата (година)": wage_hour,
-                        "Оплата (фікс)": wage_fix,
-                        "scrapped_at": datetime.utcnow()
-                    }
+                pretty = {
+                    "Дата": sd_fmt,
+                    "ID Позиції": pos_id,
+                    "Назва": shift.get("name", ""),
+                    "Компанія": company.get("name"),
+                    "ID Компанії": company.get("id"),
+                    "Час": f"{start_fmt} - {end_fmt} ({hours_diff} h)",
+                    "Локація": location.get("address"),
+                    "Локація (lat)": lat,
+                    "Локація (lng)": lng,
+                    "ID Role": entity.get('role'),
+                    "Icon": ROLE_ICONS.get(entity.get('role')),
+                    "Професія": f"{profession.get('name')} - {ROLES.get(entity.get('role'))}",
+                    "freeCapacity": entity.get('freeCapacity'),
+                    "totalCapacity": entity.get('totalCapacity'),
+                    "Вільних місць з Усього": f"{entity.get('freeCapacity')}/{entity.get('totalCapacity')}",
+                    "Оплата (година)": wage_hour,
+                    "Оплата (фікс)": wage_fix,
+                    "scrapped_at": datetime.utcnow()
+                }
 
-                # визначаємо статус
-                if prev_capacity is None and new_free_capacity > 0:
-                    status_text = "Nová změna"
-                elif prev_capacity == 0 and new_free_capacity > 0:
-                    status_text = "Znovuotevřená změna"
+            # визначаємо статус
+            if prev_capacity is None and new_free_capacity > 0:
+                status_text = "Nová změna"
+            elif prev_capacity == 0 and new_free_capacity > 0:
+                status_text = "Znovuotevřená změna"
+            else:
+                status_text = None  # не відправляємо повідомлення
+
+            # --- Повне повідомлення ---
+            if status_text and pretty.get('ID Role') != 2:
+                link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
+                if pretty["Локація (lat)"] and pretty["Локація (lng)"]:
+                    maps_link = f"https://www.google.com/maps/search/?api=1&query={pretty['Локація (lat)']},{pretty['Локація (lng)']}"
+                    maps_line = f"📍 <a href='{maps_link}'>{pretty['Локація']}</a>\n"
                 else:
-                    status_text = None  # не відправляємо повідомлення
+                    maps_line = f"📍 {pretty['Локація']}\n"
+                message = (
+                    f"📢 <b>{status_text}!</b>\n"
+                    f'🎯 <a href="{link}">{pretty["Назва"]}</a>\n'
+                    f"📅 {pretty['Дата']} ({sd_weekday_cz})\n"
+                    f"🏢 {pretty['Компанія']}\n"
+                    f"⏱️ {pretty['Час']}\n"
+                    f"💰 {pretty['Оплата (година)']} Kč/h + {pretty['Оплата (фікс)']} Kč\n"
+                    f"{maps_line}"
+                    f"{pretty['Icon']} {pretty['Професія']}\n"
+                    f"👥 Volná místa: {pretty['Вільних місць з Усього']}\n"
+                )
 
-                # --- Повне повідомлення ---
-                if status_text and pretty.get('ID Role') != 2:
-                    link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
-                    if pretty["Локація (lat)"] and pretty["Локація (lng)"]:
-                        maps_link = f"https://www.google.com/maps/search/?api=1&query={pretty['Локація (lat)']},{pretty['Локація (lng)']}"
-                        maps_line = f"📍 <a href='{maps_link}'>{pretty['Локація']}</a>\n"
-                    else:
-                        maps_line = f"📍 {pretty['Локація']}\n"
-                    message = (
-                        f"📢 <b>{status_text}!</b>\n"
-                        f'🎯 <a href="{link}">{pretty["Назва"]}</a>\n'
-                        f"📅 {pretty['Дата']} ({sd_weekday_cz})\n"
-                        f"🏢 {pretty['Компанія']}\n"
-                        f"⏱️ {pretty['Час']}\n"
-                        f"💰 {pretty['Оплата (година)']} Kč/h + {pretty['Оплата (фікс)']} Kč\n"
-                        f"{maps_line}"
-                        f"{pretty['Icon']} {pretty['Професія']}\n"
-                        f"👥 Volná místa: {pretty['Вільних місць з Усього']}\n"
-                    )
+                #send_to_telegram(message, CHAT_ID)
+                if str(pretty["ID Компанії"]) == "555":
+                    send_to_telegram(message, CHAT_ID_PARTY)
 
-                    #send_to_telegram(message, CHAT_ID)
-                    if str(pretty["ID Компанії"]) == "555":
-                        send_to_telegram(message, CHAT_ID_PARTY)
+            updates.append(pretty)
 
-                updates.append(pretty)
+        # save to DB
+        if updates:
+            db.execute(sqlalchemy.text("""
+                INSERT INTO positions_v4 (
+                    date,
+                    position_id,
+                    name,
+                    company,
+                    company_id,
+                    working_hours,
+                    location,
+                    role_id,
+                    profession,
+                    free_capacity,
+                    total_capacity,
+                    wage_hour,
+                    wage_fix,
+                    scrapped_at
+                )
+                VALUES (
+                    to_date(:date, 'DD.MM.YYYY'), 
+                    :position_id, 
+                    :name, 
+                    :company, 
+                    :company_id, 
+                    :working_hours, 
+                    :location, 
+                    :role_id,
+                    :profession,
+                    :free_capacity,
+                    :total_capacity,
+                    :wage_hour,
+                    :wage_fix,
+                    :scrapped_at)
+                ON CONFLICT (position_id) DO UPDATE
+                SET
+                    date = EXCLUDED.date,
+                    name = EXCLUDED.name,
+                    company = EXCLUDED.company,
+                    company_id = EXCLUDED.company_id,
+                    working_hours = EXCLUDED.working_hours,
+                    location = EXCLUDED.location,
+                    role_id = EXCLUDED.role_id,
+                    profession = EXCLUDED.profession,
+                    free_capacity = EXCLUDED.free_capacity,
+                    total_capacity = EXCLUDED.total_capacity,
+                    wage_hour = EXCLUDED.wage_hour,
+                    wage_fix = EXCLUDED.wage_fix,
+                    scrapped_at = EXCLUDED.scrapped_at;
+            """), updates)
+            db.commit()
 
-            # save to DB
-            if updates:
-                db.execute(sqlalchemy.text("""
-                    INSERT INTO positions_v4 (
-                        date,
-                        position_id,
-                        name,
-                        company,
-                        company_id,
-                        working_hours,
-                        location,
-                        role_id,
-                        profession,
-                        free_capacity,
-                        total_capacity,
-                        wage_hour,
-                        wage_fix,
-                        scrapped_at
-                    )
-                    VALUES (
-                        to_date(:date, 'DD.MM.YYYY'), 
-                        :position_id, 
-                        :name, 
-                        :company, 
-                        :company_id, 
-                        :working_hours, 
-                        :location, 
-                        :role_id,
-                        :profession,
-                        :free_capacity,
-                        :total_capacity,
-                        :wage_hour,
-                        :wage_fix,
-                        :scrapped_at)
-                    ON CONFLICT (position_id) DO UPDATE
-                    SET
-                        date = EXCLUDED.date,
-                        name = EXCLUDED.name,
-                        company = EXCLUDED.company,
-                        company_id = EXCLUDED.company_id,
-                        working_hours = EXCLUDED.working_hours,
-                        location = EXCLUDED.location,
-                        role_id = EXCLUDED.role_id,
-                        profession = EXCLUDED.profession,
-                        free_capacity = EXCLUDED.free_capacity,
-                        total_capacity = EXCLUDED.total_capacity,
-                        wage_hour = EXCLUDED.wage_hour,
-                        wage_fix = EXCLUDED.wage_fix,
-                        scrapped_at = EXCLUDED.scrapped_at;
-                """), updates)
-                db.commit()
-
-                # print(json.dumps(pretty, ensure_ascii=False, indent=4))
-                # print("-" * 10)
+            # print(json.dumps(pretty, ensure_ascii=False, indent=4))
+            # print("-" * 10)
         print(f"Page {page}/{total_pages} done, updated {len(updates)} positions")
 
 
