@@ -161,9 +161,7 @@ def scrape():
                 detail_resp = requests.post(API_URL, json=payload_view, headers=headers, cookies=cookies)
                 detail_data = detail_resp.json()
 
-                # якщо це список — пропускаємо
-                if isinstance(detail_data, list):
-                    continue
+                # якщо це список або не dict — пропускаємо
                 if not isinstance(detail_data, dict):
                     continue
 
