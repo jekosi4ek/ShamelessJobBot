@@ -235,109 +235,109 @@ def scrape():
                     "scrapped_at": datetime.utcnow()
                 }
 
-            # визначаємо статус
-            if prev_capacity is None and new_free_capacity > 0:
-                status_text = "Nová změna"
-            elif prev_capacity == 0 and new_free_capacity > 0:
-                status_text = "Znovuotevřená změna"
-            else:
-                status_text = None  # не відправляємо повідомлення
-
-            # --- Повне повідомлення ---
-            if status_text and pretty.get('ID Role') != 2:
-                link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
-                if pretty["Локація (lat)"] and pretty["Локація (lng)"]:
-                    maps_link = f"https://www.google.com/maps/search/?api=1&query={pretty['Локація (lat)']},{pretty['Локація (lng)']}"
-                    maps_line = f"📍 <a href='{maps_link}'>{pretty['Локація']}</a>\n"
+                # визначаємо статус
+                if prev_capacity is None and new_free_capacity > 0:
+                    status_text = "Nová změna"
+                elif prev_capacity == 0 and new_free_capacity > 0:
+                    status_text = "Znovuotevřená změna"
                 else:
-                    maps_line = f"📍 {pretty['Локація']}\n"
-                message = (
-                    f"📢 <b>{status_text}!</b>\n"
-                    f'🎯 <a href="{link}">{pretty["Назва"]}</a>\n'
-                    f"📅 {pretty['Дата']} ({sd_weekday_cz})\n"
-                    f"🏢 {pretty['Компанія']}\n"
-                    f"⏱️ {pretty['Час']}\n"
-                    f"💰 {pretty['Оплата (година)']} Kč/h + {pretty['Оплата (фікс)']} Kč\n"
-                    f"{maps_line}"
-                    f"{pretty['Icon']} {pretty['Професія']}\n"
-                    f"👥 Volná místa: {pretty['Вільних місць з Усього']}\n"
-                )
+                    status_text = None  # не відправляємо повідомлення
 
-                #send_to_telegram(message, CHAT_ID)
-                if str(pretty["ID Компанії"]) == "555":
-                    send_to_telegram(message, CHAT_ID_PARTY)
+                # --- Повне повідомлення ---
+                if status_text and pretty.get('ID Role') != 2:
+                    link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
+                    if pretty["Локація (lat)"] and pretty["Локація (lng)"]:
+                        maps_link = f"https://www.google.com/maps/search/?api=1&query={pretty['Локація (lat)']},{pretty['Локація (lng)']}"
+                        maps_line = f"📍 <a href='{maps_link}'>{pretty['Локація']}</a>\n"
+                    else:
+                        maps_line = f"📍 {pretty['Локація']}\n"
+                    message = (
+                        f"📢 <b>{status_text}!</b>\n"
+                        f'🎯 <a href="{link}">{pretty["Назва"]}</a>\n'
+                        f"📅 {pretty['Дата']} ({sd_weekday_cz})\n"
+                        f"🏢 {pretty['Компанія']}\n"
+                        f"⏱️ {pretty['Час']}\n"
+                        f"💰 {pretty['Оплата (година)']} Kč/h + {pretty['Оплата (фікс)']} Kč\n"
+                        f"{maps_line}"
+                        f"{pretty['Icon']} {pretty['Професія']}\n"
+                        f"👥 Volná místa: {pretty['Вільних місць з Усього']}\n"
+                    )
 
-            updates.append({
-                "date": pretty.get("Дата") or None,
-                "position_id": pretty["ID Позиції"],
-                "name": pretty["Назва"],
-                "company": pretty["Компанія"],
-                "company_id": pretty["ID Компанії"],
-                "working_hours": pretty["Час"],
-                "location": pretty["Локація"],
-                "role_id": pretty["ID Role"],
-                "profession": pretty["Професія"],
-                "free_capacity": pretty["freeCapacity"],
-                "total_capacity": pretty["totalCapacity"],
-                "wage_hour": pretty["Оплата (година)"],
-                "wage_fix": pretty["Оплата (фікс)"],
-                "scrapped_at": pretty["scrapped_at"],
-            })
+                    #send_to_telegram(message, CHAT_ID)
+                    if str(pretty["ID Компанії"]) == "555":
+                        send_to_telegram(message, CHAT_ID_PARTY)
 
-        # save to DB
-        if updates:
-            db.execute(sqlalchemy.text("""
-                INSERT INTO positions_v4 (
-                    date,
-                    position_id,
-                    name,
-                    company,
-                    company_id,
-                    working_hours,
-                    location,
-                    role_id,
-                    profession,
-                    free_capacity,
-                    total_capacity,
-                    wage_hour,
-                    wage_fix,
-                    scrapped_at
-                )
-                VALUES (
-                    to_date(:date, 'DD.MM.YYYY'), 
-                    :position_id, 
-                    :name, 
-                    :company, 
-                    :company_id, 
-                    :working_hours, 
-                    :location, 
-                    :role_id,
-                    :profession,
-                    :free_capacity,
-                    :total_capacity,
-                    :wage_hour,
-                    :wage_fix,
-                    :scrapped_at)
-                ON CONFLICT (position_id) DO UPDATE
-                SET
-                    date = EXCLUDED.date,
-                    name = EXCLUDED.name,
-                    company = EXCLUDED.company,
-                    company_id = EXCLUDED.company_id,
-                    working_hours = EXCLUDED.working_hours,
-                    location = EXCLUDED.location,
-                    role_id = EXCLUDED.role_id,
-                    profession = EXCLUDED.profession,
-                    free_capacity = EXCLUDED.free_capacity,
-                    total_capacity = EXCLUDED.total_capacity,
-                    wage_hour = EXCLUDED.wage_hour,
-                    wage_fix = EXCLUDED.wage_fix,
-                    scrapped_at = EXCLUDED.scrapped_at;
-            """),updates)
-            db.commit()
+                updates.append({
+                    "date": pretty.get("Дата") or None,
+                    "position_id": pretty["ID Позиції"],
+                    "name": pretty["Назва"],
+                    "company": pretty["Компанія"],
+                    "company_id": pretty["ID Компанії"],
+                    "working_hours": pretty["Час"],
+                    "location": pretty["Локація"],
+                    "role_id": pretty["ID Role"],
+                    "profession": pretty["Професія"],
+                    "free_capacity": pretty["freeCapacity"],
+                    "total_capacity": pretty["totalCapacity"],
+                    "wage_hour": pretty["Оплата (година)"],
+                    "wage_fix": pretty["Оплата (фікс)"],
+                    "scrapped_at": pretty["scrapped_at"],
+                })
 
-            # print(json.dumps(pretty, ensure_ascii=False, indent=4))
-            # print("-" * 10)
+            # save to DB
+            if updates:
+                db.execute(sqlalchemy.text("""
+                    INSERT INTO positions_v4 (
+                        date,
+                        position_id,
+                        name,
+                        company,
+                        company_id,
+                        working_hours,
+                        location,
+                        role_id,
+                        profession,
+                        free_capacity,
+                        total_capacity,
+                        wage_hour,
+                        wage_fix,
+                        scrapped_at
+                    )
+                    VALUES (
+                        to_date(:date, 'DD.MM.YYYY'), 
+                        :position_id, 
+                        :name, 
+                        :company, 
+                        :company_id, 
+                        :working_hours, 
+                        :location, 
+                        :role_id,
+                        :profession,
+                        :free_capacity,
+                        :total_capacity,
+                        :wage_hour,
+                        :wage_fix,
+                        :scrapped_at)
+                    ON CONFLICT (position_id) DO UPDATE
+                    SET
+                        date = EXCLUDED.date,
+                        name = EXCLUDED.name,
+                        company = EXCLUDED.company,
+                        company_id = EXCLUDED.company_id,
+                        working_hours = EXCLUDED.working_hours,
+                        location = EXCLUDED.location,
+                        role_id = EXCLUDED.role_id,
+                        profession = EXCLUDED.profession,
+                        free_capacity = EXCLUDED.free_capacity,
+                        total_capacity = EXCLUDED.total_capacity,
+                        wage_hour = EXCLUDED.wage_hour,
+                        wage_fix = EXCLUDED.wage_fix,
+                        scrapped_at = EXCLUDED.scrapped_at;
+                """),updates)
+                db.commit()
+
+                # print(json.dumps(pretty, ensure_ascii=False, indent=4))
+                # print("-" * 10)
         print(f"Page {page}/{total_pages} done, updated {len(updates)} positions")
 
 
