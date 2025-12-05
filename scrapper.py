@@ -152,9 +152,9 @@ def scrape():
                 ), {"position_id": pos_id}).fetchone()
 
                 prev_capacity = prev_capacity_row[0] if prev_capacity_row else None
-                new_capacity = pos.get("freeCapacity")
+                new_free_capacity = pos.get("freeCapacity")
 
-                if prev_capacity == new_capacity:
+                if prev_capacity == new_free_capacity:
                     continue  # пропускаємо, якщо нічого не змінилось
 
                 # детальний запит
