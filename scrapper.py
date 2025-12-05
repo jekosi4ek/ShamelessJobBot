@@ -354,12 +354,8 @@ def scrape():
                 """), updates)
                 db.commit()
 
-                if updates:
-                    db.execute(sqlalchemy.text(""" ... """), updates)
-                    db.commit()
-
-                    ids = [str(u["position_id"]) for u in updates]
-                    all_ids.extend(ids)
+                ids = [str(u["position_id"]) for u in updates]
+                all_ids.extend(ids)
 
             print(
                 f"Scrapped at {time.strftime('%Y-%m-%d %H:%M:%S')} "
