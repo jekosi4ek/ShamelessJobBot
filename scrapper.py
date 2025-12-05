@@ -357,7 +357,7 @@ def scrape():
 
     print(
         f"Scrapped at {time.strftime('%Y-%m-%d %H:%M:%S')} "
-        f"Pages {total_pages}/{total_pages}, Positions {len(all_ids)} (IDs: "
+        f"Pages: {total_pages}, Positions {len(all_ids)} (IDs: "
         + ", ".join(sorted(all_ids))
         + ")"
     )
