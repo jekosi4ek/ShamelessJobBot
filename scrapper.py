@@ -174,6 +174,11 @@ def scrape():
 
                 # витягуємо entities
                 entities = detail_data.get("entities", {})
+                # якщо entities не dict — пропускаємо
+                if not isinstance(entities, dict):
+                    print(f"⚠️ Skipping pos_id={pos_id}, entities is {type(entities)}")
+                    continue
+                    
                 entity = entities.get("Position", {}).get(str(pos_id), {})
                 shift = entities.get("Shift", {}).get(str(entity.get("shift")), {})
                 company = entities.get("Company", {}).get(str(shift.get("company")), {})
