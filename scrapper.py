@@ -163,17 +163,17 @@ def scrape():
                 detail_resp = requests.post(API_URL, json=payload_view, headers=headers, cookies=cookies)
 
                 if detail_resp.status_code != 200:
-                    print(f"⚠️ pos_id={pos_id} API returned {detail_resp.status_code}")
+                    #print(f"⚠️ pos_id={pos_id} API returned {detail_resp.status_code}")
                     continue
 
                 if not detail_resp.text.strip():
-                    print(f"⚠️ pos_id={pos_id} API returned empty body")
+                    #print(f"⚠️ pos_id={pos_id} API returned empty body")
                     continue
 
                 try:
                     detail_data = detail_resp.json()
                 except ValueError:
-                    print(f"⚠️ pos_id={pos_id} API returned non‑JSON: {detail_resp.text[:200]}")
+                    #print(f"⚠️ pos_id={pos_id} API returned non‑JSON: {detail_resp.text[:200]}")
                     continue
 
                 detail_data = detail_resp.json()
@@ -219,8 +219,10 @@ def scrape():
                 LOCAL_TZ = pytz.timezone("Europe/Prague")
 
                 start_fmt, end_fmt, sd_fmt, hours_diff = "", "", "", None
+                sd_date = None
                 if start:
                     start_dt = datetime.fromisoformat(start).astimezone(LOCAL_TZ)
+                    sd_date = start_dt.date()  # <-- чиста дата для БД
                     start_fmt = start_dt.strftime("%H:%M")
                     sd_fmt = start_dt.strftime("%d.%m.%Y")
                     sd_weekday_en = start_dt.strftime("%A")
@@ -284,7 +286,7 @@ def scrape():
                         send_to_telegram(message, CHAT_ID_PARTY)
 
                 updates.append({
-                    "date": pretty.get("Дата") or None,
+                    "date": sd_date,
                     "position_id": pretty["ID Позиції"],
                     "name": pretty["Назва"],
                     "company": pretty["Компанія"],
@@ -320,7 +322,7 @@ def scrape():
                         scrapped_at
                     )
                     VALUES (
-                        to_date(:date, 'DD.MM.YYYY'), 
+                        :date, 
                         :position_id, 
                         :name, 
                         :company, 
@@ -349,7 +351,7 @@ def scrape():
                         wage_hour = EXCLUDED.wage_hour,
                         wage_fix = EXCLUDED.wage_fix,
                         scrapped_at = EXCLUDED.scrapped_at;
-                """),updates)
+                """), updates)
                 db.commit()
 
                 if updates:
@@ -359,14 +361,9 @@ def scrape():
                     ids = [str(u["position_id"]) for u in updates]
                     all_ids.extend(ids)
 
-                    print(
-                        f"Scrapped at {time.strftime('%Y-%m-%d %H:%M:%S')} "
-                        f"for Page {page}/{total_pages}, updated {len(updates)} positions: "
-                        + ", ".join(ids)
-                    )
-
             print(
-                f"✅ Тотально оброблено {page}/{total_pages}, позицій {len(all_ids)}: "
+                f"Scrapped at {time.strftime('%Y-%m-%d %H:%M:%S')} "
+                f"Pages {page}/{total_pages}, Positions {len(all_ids)}: "
                 + ", ".join(all_ids)
             )
 
