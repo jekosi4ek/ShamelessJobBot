@@ -230,17 +230,6 @@ def scrape():
                         "scrapped_at": datetime.utcnow()
                     }
 
-                        # новий стан
-                new_free_capacity = pretty["freeCapacity"]
-
-                # отримуємо попередній стан для цієї позиції
-                prev_capacity_row = db.execute(sqlalchemy.text("""
-                    SELECT free_capacity FROM positions_v4
-                    WHERE position_id = :position_id
-                """), {"position_id": pretty["ID Позиції"]}).fetchone()
-
-                prev_capacity = prev_capacity_row[0] if prev_capacity_row else None
-
                 # визначаємо статус
                 if prev_capacity is None and new_free_capacity > 0:
                     status_text = "Nová změna"
