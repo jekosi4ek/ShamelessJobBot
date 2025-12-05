@@ -137,7 +137,7 @@ def scrape():
     )
     total_pages = math.ceil(meta_count / LIMIT)
 
-    all_ids = []
+    all_ids = set()
 
     with SessionLocal() as db:
         for page in range(1, total_pages + 1):
@@ -353,13 +353,14 @@ def scrape():
                 db.commit()
 
                 ids = [str(u["position_id"]) for u in updates]
-                all_ids.extend(ids)
+                all_ids.update(ids)
 
-            print(
-                f"Scrapped at {time.strftime('%Y-%m-%d %H:%M:%S')} "
-                f"Pages {page}/{total_pages}, Positions {len(all_ids)} "
-                f"(IDs: {', '.join(list(all_ids)[:20])} ...)"
-            )
+    print(
+        f"Scrapped at {time.strftime('%Y-%m-%d %H:%M:%S')} "
+        f"Pages {total_pages}/{total_pages}, Positions {len(all_ids)} (IDs: "
+        + ", ".join(sorted(all_ids))
+        + ")"
+    )
 
 
                     # --- Запуск ---
