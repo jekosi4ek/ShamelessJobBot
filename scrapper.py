@@ -176,8 +176,6 @@ def scrape():
                     #print(f"⚠️ pos_id={pos_id} API returned non‑JSON: {detail_resp.text[:200]}")
                     continue
 
-                detail_data = detail_resp.json()
-
                 # якщо це список або не dict — пропускаємо
                 if not isinstance(detail_data, dict):
                     #print(f"⚠️ Skipping pos_id={pos_id}, API returned {type(detail_data)}")
@@ -359,9 +357,10 @@ def scrape():
 
             print(
                 f"Scrapped at {time.strftime('%Y-%m-%d %H:%M:%S')} "
-                f"Pages {page}/{total_pages}, Positions {len(all_ids)}: "
-                + ", ".join(all_ids)
+                f"Pages {page}/{total_pages}, Positions {len(all_ids)} "
+                f"(IDs: {', '.join(list(all_ids)[:20])} ...)"
             )
+
 
                     # --- Запуск ---
 if __name__ == "__main__":
