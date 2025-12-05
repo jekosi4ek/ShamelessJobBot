@@ -161,6 +161,12 @@ def scrape():
                 detail_resp = requests.post(API_URL, json=payload_view, headers=headers, cookies=cookies)
                 detail_data = detail_resp.json()
 
+                # якщо це список — пропускаємо
+                if isinstance(detail_data, list):
+                    continue
+                if not isinstance(detail_data, dict):
+                    continue
+
                 # витягуємо wage тільки якщо detail_data — dict
                 wage = detail_data.get("result", {}).get("wage", {}) or {}
                 wage_hour = wage.get("hour")
