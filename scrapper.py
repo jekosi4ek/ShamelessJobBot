@@ -144,23 +144,22 @@ def scrape():
             resp = requests.post(API_URL, json=payload_index, headers=headers, cookies=cookies)
             positions = resp.json().get("entities", {}).get("Position", {})
 
+            updates = []
             for pos_id, pos in positions.items():
-                #existing = db.execute(
-                    #sqlalchemy.text("SELECT 1 FROM positions_v4 WHERE position_id = :position_id"),
-                    #{"position_id": pos_id}
-                #).fetchone()
-                #if existing:
-                    #continue
+                # перевірка чи змінилась capacity
+                prev_capacity_row = db.execute(sqlalchemy.text(
+                    "SELECT free_capacity FROM positions_v4 WHERE position_id = :position_id"
+                ), {"position_id": pos_id}).fetchone()
+
+                prev_capacity = prev_capacity_row[0] if prev_capacity_row else None
+                new_capacity = pos.get("freeCapacity")
+
+                if prev_capacity == new_capacity:
+                    continue  # пропускаємо, якщо нічого не змінилось
 
                 payload_view = {"key": f"worker/Positions/View/{pos_id}", "meta": {}, "params": {"id": pos_id}}
                 detail_resp = requests.post(API_URL, json=payload_view, headers=headers, cookies=cookies)
                 detail_data = detail_resp.json()
-
-                if isinstance(detail_data, list):
-                    continue
-                entities = detail_data.get("entities", {})
-                if not isinstance(entities, dict):
-                    continue
 
                 # витягуємо wage тільки якщо detail_data — dict
                 wage = detail_data.get("result", {}).get("wage", {}) or {}
@@ -277,7 +276,10 @@ def scrape():
                     if str(pretty["ID Компанії"]) == "555":
                         send_to_telegram(message, CHAT_ID_PARTY)
 
-                # save to DB
+                updates.append(pretty)
+
+            # save to DB
+            if updates:
                 db.execute(sqlalchemy.text("""
                     INSERT INTO positions_v4 (
                         date,
@@ -325,26 +327,12 @@ def scrape():
                         wage_hour = EXCLUDED.wage_hour,
                         wage_fix = EXCLUDED.wage_fix,
                         scrapped_at = EXCLUDED.scrapped_at;
-                """), {
-                    "date": pretty["Дата"],
-                    "position_id": pretty["ID Позиції"],
-                    "name": pretty["Назва"],
-                    "company": pretty["Компанія"],
-                    "company_id": pretty["ID Компанії"],
-                    "working_hours": pretty["Час"],
-                    "location": pretty["Локація"],
-                    "role_id": pretty["ID Role"],
-                    "profession": pretty["Професія"],
-                    "free_capacity": pretty["freeCapacity"],
-                    "total_capacity": pretty["totalCapacity"],
-                    "wage_hour": pretty["Оплата (година)"],
-                    "wage_fix": pretty["Оплата (фікс)"],
-                    "scrapped_at": datetime.utcnow()
-                })
+                """), updates)
                 db.commit()
 
                 # print(json.dumps(pretty, ensure_ascii=False, indent=4))
                 # print("-" * 10)
+        print(f"Page {page}/{total_pages} done, updated {len(updates)} positions")
         print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 
