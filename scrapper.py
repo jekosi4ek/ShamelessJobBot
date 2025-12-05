@@ -55,7 +55,7 @@ Base.metadata.create_all(engine)
 
 # --- Telegram ---
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID") #my bot, sending all the data
+#CHAT_ID = os.getenv("CHAT_ID") #my bot, sending all the data
 CHAT_ID_PARTY = os.getenv("CHAT_ID_PARTY")
 
 
@@ -137,6 +137,7 @@ def scrape():
     )
     total_pages = math.ceil(meta_count / LIMIT)
 
+    all_ids = []
 
     with SessionLocal() as db:
         for page in range(1, total_pages + 1):
@@ -160,6 +161,21 @@ def scrape():
                 # детальний запит
                 payload_view = {"key": f"worker/Positions/View/{pos_id}", "meta": {}, "params": {"id": pos_id}}
                 detail_resp = requests.post(API_URL, json=payload_view, headers=headers, cookies=cookies)
+
+                if detail_resp.status_code != 200:
+                    print(f"⚠️ pos_id={pos_id} API returned {detail_resp.status_code}")
+                    continue
+
+                if not detail_resp.text.strip():
+                    print(f"⚠️ pos_id={pos_id} API returned empty body")
+                    continue
+
+                try:
+                    detail_data = detail_resp.json()
+                except ValueError:
+                    print(f"⚠️ pos_id={pos_id} API returned non‑JSON: {detail_resp.text[:200]}")
+                    continue
+
                 detail_data = detail_resp.json()
 
                 # якщо це список або не dict — пропускаємо
@@ -336,12 +352,25 @@ def scrape():
                 """),updates)
                 db.commit()
 
-                # print(json.dumps(pretty, ensure_ascii=False, indent=4))
-                # print("-" * 10)
-        print(f"Page {page}/{total_pages} done, updated {len(updates)} positions")
+                if updates:
+                    db.execute(sqlalchemy.text(""" ... """), updates)
+                    db.commit()
 
+                    ids = [str(u["position_id"]) for u in updates]
+                    all_ids.extend(ids)
 
-# --- Запуск ---
+                    print(
+                        f"Scrapped at {time.strftime('%Y-%m-%d %H:%M:%S')} "
+                        f"for Page {page}/{total_pages}, updated {len(updates)} positions: "
+                        + ", ".join(ids)
+                    )
+
+            print(
+                f"✅ Тотально оброблено {page}/{total_pages}, позицій {len(all_ids)}: "
+                + ", ".join(all_ids)
+            )
+
+                    # --- Запуск ---
 if __name__ == "__main__":
     # один раз при старті
     scrape()
