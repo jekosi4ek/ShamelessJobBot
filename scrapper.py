@@ -333,7 +333,6 @@ def scrape():
                 # print(json.dumps(pretty, ensure_ascii=False, indent=4))
                 # print("-" * 10)
         print(f"Page {page}/{total_pages} done, updated {len(updates)} positions")
-        print("Scraping done at", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 
 # --- Запуск ---
