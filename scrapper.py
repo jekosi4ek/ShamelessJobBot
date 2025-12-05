@@ -164,7 +164,7 @@ def scrape():
 
                 # якщо це список або не dict — пропускаємо
                 if not isinstance(detail_data, dict):
-                    print(f"⚠️ Skipping pos_id={pos_id}, API returned {type(detail_data)}")
+                    #print(f"⚠️ Skipping pos_id={pos_id}, API returned {type(detail_data)}")
                     continue
 
                 # витягуємо wage
@@ -176,7 +176,7 @@ def scrape():
                 entities = detail_data.get("entities", {})
                 # якщо entities не dict — пропускаємо
                 if not isinstance(entities, dict):
-                    print(f"⚠️ Skipping pos_id={pos_id}, entities is {type(entities)}")
+                    #print(f"⚠️ Skipping pos_id={pos_id}, entities is {type(entities)}")
                     continue
                     
                 entity = entities.get("Position", {}).get(str(pos_id), {})
