@@ -170,8 +170,8 @@ def scrape():
                 wage_hour = wage.get("hour")
                 wage_fix = wage.get("fix")
 
-                entity = entities.get("Position", {}).get(str(pos_id), {})
-                shift = entities.get("Shift", {}).get(str(entity.get("shift")), {})
+                entity = detail_data.get("entities", {})
+                shift = detail_data.get("Shift", {}).get(str(entity.get("shift")), {})
                 company = entities.get("Company", {}).get(str(shift.get("company")), {})
                 profession = entities.get("Profession", {}).get(str(entity.get("profession")), {})
                 location = entities.get("Location", {}).get(str(entity.get("location")), {})
