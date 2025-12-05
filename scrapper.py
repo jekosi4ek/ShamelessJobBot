@@ -318,7 +318,22 @@ def scrape():
                     wage_hour = EXCLUDED.wage_hour,
                     wage_fix = EXCLUDED.wage_fix,
                     scrapped_at = EXCLUDED.scrapped_at;
-            """), updates)
+            """), {
+                "date": pretty.get("Дата") or None,
+                "position_id": pretty["ID Позиції"],
+                "name": pretty["Назва"],
+                "company": pretty["Компанія"],
+                "company_id": pretty["ID Компанії"],
+                "working_hours": pretty["Час"],
+                "location": pretty["Локація"],
+                "role_id": pretty["ID Role"],
+                "profession": pretty["Професія"],
+                "free_capacity": pretty["freeCapacity"],
+                "total_capacity": pretty["totalCapacity"],
+                "wage_hour": pretty["Оплата (година)"],
+                "wage_fix": pretty["Оплата (фікс)"],
+                "scrapped_at": datetime.utcnow()
+            })
             db.commit()
 
             # print(json.dumps(pretty, ensure_ascii=False, indent=4))
