@@ -138,106 +138,99 @@ def scrape():
     total_pages = math.ceil(meta_count / LIMIT)
 
 
-    with SessionLocal() as db:
-        for page in range(1, total_pages + 1):
-            payload_index["meta"]["page"] = page
-            resp = requests.post(API_URL, json=payload_index, headers=headers, cookies=cookies)
-            positions = resp.json().get("entities", {}).get("Position", {})
+        with SessionLocal() as db:
+            for page in range(1, total_pages + 1):
+                payload_index["meta"]["page"] = page
+                resp = requests.post(API_URL, json=payload_index, headers=headers, cookies=cookies)
+                positions = resp.json().get("entities", {}).get("Position", {})
 
-            updates = []
-            for pos_id, pos in positions.items():
-                # перевірка чи змінилась capacity
-                prev_capacity_row = db.execute(sqlalchemy.text(
-                    "SELECT free_capacity FROM positions_v4 WHERE position_id = :position_id"
-                ), {"position_id": pos_id}).fetchone()
+                updates = []
+                for pos_id, pos in positions.items():
+                    # перевірка чи змінилась capacity
+                    prev_capacity_row = db.execute(sqlalchemy.text(
+                        "SELECT free_capacity FROM positions_v4 WHERE position_id = :position_id"
+                    ), {"position_id": pos_id}).fetchone()
 
-                prev_capacity = prev_capacity_row[0] if prev_capacity_row else None
-                new_capacity = pos.get("freeCapacity")
+                    prev_capacity = prev_capacity_row[0] if prev_capacity_row else None
+                    new_capacity = pos.get("freeCapacity")
 
-                if prev_capacity == new_capacity:
-                    continue  # пропускаємо, якщо нічого не змінилось
+                    if prev_capacity == new_capacity:
+                        continue  # пропускаємо, якщо нічого не змінилось
 
-                payload_view = {"key": f"worker/Positions/View/{pos_id}", "meta": {}, "params": {"id": pos_id}}
-                detail_resp = requests.post(API_URL, json=payload_view, headers=headers, cookies=cookies)
-                detail_data = detail_resp.json()
+                    # детальний запит
+                    payload_view = {"key": f"worker/Positions/View/{pos_id}", "meta": {}, "params": {"id": pos_id}}
+                    detail_resp = requests.post(API_URL, json=payload_view, headers=headers, cookies=cookies)
+                    detail_data = detail_resp.json()
 
-                # якщо це список або не dict — пропускаємо
-                if not isinstance(detail_data, dict):
-                    continue
+                    # якщо це список або не dict — пропускаємо
+                    if not isinstance(detail_data, dict):
+                        print(f"⚠️ Skipping pos_id={pos_id}, API returned {type(detail_data)}")
+                        continue
 
-                # витягуємо wage тільки якщо detail_data — dict
-                wage = detail_data.get("result", {}).get("wage", {}) or {}
-                wage_hour = wage.get("hour")
-                wage_fix = wage.get("fix")
+                    # витягуємо wage
+                    wage = (detail_data.get("result") or {}).get("wage") or {}
+                    wage_hour = wage.get("hour")
+                    wage_fix = wage.get("fix")
 
-                entity = detail_data.get("entities", {})
-                shift = detail_data.get("Shift", {}).get(str(entity.get("shift")), {})
-                company = entities.get("Company", {}).get(str(shift.get("company")), {})
-                profession = entities.get("Profession", {}).get(str(entity.get("profession")), {})
-                location = entities.get("Location", {}).get(str(entity.get("location")), {})
-                # координати
-                point = entity.get("point") or location.get("point") or {}
-                lat = point.get("lat")
-                lng = point.get("lng")
+                    # витягуємо entities
+                    entities = detail_data.get("entities", {})
+                    entity = entities.get("Position", {}).get(str(pos_id), {})
+                    shift = entities.get("Shift", {}).get(str(entity.get("shift")), {})
+                    company = entities.get("Company", {}).get(str(shift.get("company")), {})
+                    profession = entities.get("Profession", {}).get(str(entity.get("profession")), {})
+                    location = entities.get("Location", {}).get(str(entity.get("location")), {})
 
-                start = entity.get("startTime")
-                end = entity.get("endTime")
+                    # координати
+                    point = entity.get("point") or location.get("point") or {}
+                    lat = point.get("lat")
+                    lng = point.get("lng")
 
-                CZ_WEEKDAYS = {
-                    "Monday": "pondĕlí", "tuesday": "úterý", "Wednesday": "středa",
-                    "Thursday": "čtvrtek", "Friday": "pátek", "Saturday": "sobota", "Sunday": "nedĕle"
-                }
+                    start = entity.get("startTime")
+                    end = entity.get("endTime")
 
-                ROLES = {
-                    0: "Pracovník",
-                    1: "Crewboss",
-                    2: "Záložník",
-                }
+                    CZ_WEEKDAYS = {
+                        "Monday": "pondĕlí", "Tuesday": "úterý", "Wednesday": "středa",
+                        "Thursday": "čtvrtek", "Friday": "pátek", "Saturday": "sobota", "Sunday": "nedĕle"
+                    }
 
-                ROLE_ICONS = {
-                    0: "🔧",  # робітник
-                    1: "💼",  # керівник / Crewboss
-                    2: "🛡️",  # резерв / Зáložník
-                }
+                    ROLES = {0: "Pracovník", 1: "Crewboss", 2: "Záložník"}
+                    ROLE_ICONS = {0: "🔧", 1: "💼", 2: "🛡️"}
+                    LOCAL_TZ = pytz.timezone("Europe/Prague")
 
-                LOCAL_TZ = pytz.timezone("Europe/Prague")
+                    start_fmt, end_fmt, sd_fmt, hours_diff = "", "", "", None
+                    if start:
+                        start_dt = datetime.fromisoformat(start).astimezone(LOCAL_TZ)
+                        start_fmt = start_dt.strftime("%H:%M")
+                        sd_fmt = start_dt.strftime("%d.%m.%Y")
+                        sd_weekday_en = start_dt.strftime("%A")
+                        sd_weekday_cz = CZ_WEEKDAYS.get(sd_weekday_en, sd_weekday_en)
+                    if end:
+                        end_dt = datetime.fromisoformat(end).astimezone(LOCAL_TZ)
+                        end_fmt = end_dt.strftime("%H:%M")
+                        hours_diff = (end_dt - start_dt).total_seconds() / 3600
 
-                start_fmt, end_fmt, sd_fmt, hours_diff = "", "", "", None
-                if start:
-                    start_dt = datetime.fromisoformat(start)
-                    start_dt = start_dt.astimezone(LOCAL_TZ)
-                    start_fmt = start_dt.strftime("%H:%M")
-                    sd_fmt = start_dt.strftime("%d.%m.%Y")
-                    sd_weekday_en = start_dt.strftime("%A")
-                    sd_weekday_cz = CZ_WEEKDAYS.get(sd_weekday_en, sd_weekday_en)
-                if end:
-                    end_dt = datetime.fromisoformat(end)
-                    end_dt = end_dt.astimezone(LOCAL_TZ)
-                    end_fmt = end_dt.strftime("%H:%M")
-                    hours_diff = (end_dt - start_dt).total_seconds() / 3600
+                    pretty = {
+                        "Дата": sd_fmt,
+                        "ID Позиції": pos_id,
+                        "Назва": shift.get("name", ""),
+                        "Компанія": company.get("name"),
+                        "ID Компанії": company.get("id"),
+                        "Час": f"{start_fmt} - {end_fmt} ({hours_diff} h)",
+                        "Локація": location.get("address"),
+                        "Локація (lat)": lat,
+                        "Локація (lng)": lng,
+                        "ID Role": entity.get('role'),
+                        "Icon": ROLE_ICONS.get(entity.get('role')),
+                        "Професія": f"{profession.get('name')} - {ROLES.get(entity.get('role'))}",
+                        "freeCapacity": entity.get('freeCapacity'),
+                        "totalCapacity": entity.get('totalCapacity'),
+                        "Вільних місць з Усього": f"{entity.get('freeCapacity')}/{entity.get('totalCapacity')}",
+                        "Оплата (година)": wage_hour,
+                        "Оплата (фікс)": wage_fix,
+                        "scrapped_at": datetime.utcnow()
+                    }
 
-                pretty = {
-                    "Дата": sd_fmt,
-                    "ID Позиції": pos_id,
-                    "Назва": shift.get("name", ""),
-                    "Компанія": company.get("name"),
-                    "ID Компанії": company.get("id"),
-                    "Час": f"{start_fmt} - {end_fmt} ({hours_diff} h)",
-                    "Локація": location.get("address"),
-                    "Локація (lat)": lat,
-                    "Локація (lng)": lng,
-                    "ID Role": entity.get('role'),
-                    "Icon": f"{ROLE_ICONS.get(entity.get('role'), entity.get('role'))}",
-                    "Професія": f"{profession.get('name')} - {ROLES.get(entity.get('role'), entity.get('role'))}",
-                    "freeCapacity": entity.get('freeCapacity'),
-                    "totalCapacity": entity.get('totalCapacity'),
-                    "Вільних місць з Усього": f"{entity.get('freeCapacity')}/{entity.get('totalCapacity')}",
-                    "Оплата (година)": wage_hour,
-                    "Оплата (фікс)": wage_fix,
-                    "scrapped_at": datetime.utcnow()
-                }
-
-                # новий стан
+                        # новий стан
                 new_free_capacity = pretty["freeCapacity"]
 
                 # отримуємо попередній стан для цієї позиції
