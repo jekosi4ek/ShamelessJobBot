@@ -55,7 +55,7 @@ Base.metadata.create_all(engine)
 
 # --- Telegram ---
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-#CHAT_ID = os.getenv("CHAT_ID") #my bot, sending all the data
+CHAT_ID = os.getenv("@shamelesscz") #public channel, my bot: CHAT_ID in railway
 CHAT_ID_PARTY = os.getenv("CHAT_ID_PARTY")
 
 
@@ -279,7 +279,9 @@ def scrape():
                         f"👥 Volná místa: {pretty['Вільних місць з Усього']}\n"
                     )
 
-                    #send_to_telegram(message, CHAT_ID)
+                    if str(pretty["ID Компанії"]) != "555":
+                        send_to_telegram(message, CHAT_ID)
+
                     if str(pretty["ID Компанії"]) == "555":
                         send_to_telegram(message, CHAT_ID_PARTY)
 
