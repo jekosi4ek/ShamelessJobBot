@@ -260,7 +260,7 @@ def scrape():
                     status_text = None  # не відправляємо повідомлення
 
                 # --- Повне повідомлення ---
-                if status_text and pretty.get('ID Role') != 2:
+                if status_text:
                     link = f"https://shameless.sinch.cz/react/position/{pretty['ID Позиції']}"
                     if pretty["Локація (lat)"] and pretty["Локація (lng)"]:
                         maps_link = f"https://www.google.com/maps/search/?api=1&query={pretty['Локація (lat)']},{pretty['Локація (lng)']}"
@@ -282,7 +282,7 @@ def scrape():
                     if str(pretty["ID Компанії"]) != "555":
                         send_to_telegram(message, CHAT_ID)
 
-                    if str(pretty["ID Компанії"]) == "555":
+                    if str(pretty["ID Компанії"]) == "555" and pretty.get('ID Role') != 2:
                         send_to_telegram(message, CHAT_ID_PARTY)
 
                 updates.append({
