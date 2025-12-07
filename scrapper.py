@@ -279,11 +279,11 @@ def scrape():
                         f"👥 Volná místa: {pretty['Вільних місць з Усього']}\n"
                     )
 
-                    if str(pretty["ID Компанії"]) != "555":
-                        send_to_telegram(message, CHAT_ID)
-
                     if str(pretty["ID Компанії"]) == "555" and pretty.get('ID Role') != 2:
                         send_to_telegram(message, CHAT_ID_PARTY)
+
+                    if str(pretty["ID Компанії"]) != "555":
+                        send_to_telegram(message, CHAT_ID)
 
                 updates.append({
                     "date": sd_date,
