@@ -55,7 +55,7 @@ Base.metadata.create_all(engine)
 
 # --- Telegram ---
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("@shamelesscz") #public channel, my bot: CHAT_ID in railway
+CHAT_ID = os.getenv("CHAT_ID") #public channel, my bot: CHATBOT_ID in railway
 CHAT_ID_PARTY = os.getenv("CHAT_ID_PARTY")
 
 
