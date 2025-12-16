@@ -105,6 +105,33 @@ def get_cookies():
         cookies = asyncio.run(login_and_get_cookies())
     return cookies
 
+def safe_json(resp):
+    """Безпечний JSON-парсер, який не ламає скрейпер."""
+    try:
+        return resp.json()
+    except Exception:
+        print("❌ Non‑JSON response")
+        print("STATUS:", resp.status_code)
+        print("TEXT:", resp.text[:500])
+        return None
+
+
+def refresh_cookies_if_needed(resp, cookies, payload, headers):
+    """Перевіряє чи протухли cookies, і оновлює їх."""
+    # 1. Явний 401
+    if resp.status_code == 401:
+        print("⚠️ Cookies expired (401), refreshing...")
+        cookies = asyncio.run(login_and_get_cookies())
+        return requests.post(API_URL, json=payload, headers=headers, cookies=cookies), cookies
+
+    # 2. HTML login page
+    if "login" in resp.text.lower() or "<html" in resp.text.lower():
+        print("⚠️ Cookies expired (HTML login page), refreshing...")
+        cookies = asyncio.run(login_and_get_cookies())
+        return requests.post(API_URL, json=payload, headers=headers, cookies=cookies), cookies
+
+    return resp, cookies
+
 
 # --- Scraper ---
 def scrape():
@@ -123,13 +150,14 @@ def scrape():
         "params": {"attend": True, "ignoreCapacity": True, "ignoreRating": True}
     }
 
+    # --- ПЕРШИЙ ЗАПИТ ---
     resp = requests.post(API_URL, json=payload_index, headers=headers, cookies=cookies)
-    if resp.status_code == 401:
-        print("⚠️ Cookies expired, refreshing...")
-        cookies = asyncio.run(login_and_get_cookies())
-        resp = requests.post(API_URL, json=payload_index, headers=headers, cookies=cookies)
+    resp, cookies = refresh_cookies_if_needed(resp, cookies, payload_index, headers)
 
-    data = resp.json()
+    data = safe_json(resp)
+    if not data:
+        print("❌ Cannot parse first page, aborting scrape()")
+        return
     meta_count = (
             data.get("entities", {}).get("meta", {}).get("count")
             or data.get("meta", {}).get("count")
@@ -143,7 +171,15 @@ def scrape():
         for page in range(1, total_pages + 1):
             payload_index["meta"]["page"] = page
             resp = requests.post(API_URL, json=payload_index, headers=headers, cookies=cookies)
-            positions = resp.json().get("entities", {}).get("Position", {})
+
+            resp, cookies = refresh_cookies_if_needed(resp, cookies, payload_index, headers)
+
+            data = safe_json(resp)
+            if not data:
+                print(f"⚠️ Skipping page {page}, invalid JSON")
+                continue
+
+            positions = data.get("entities", {}).get("Position", {})
 
             updates = []
             for pos_id, pos in positions.items():
@@ -161,43 +197,27 @@ def scrape():
                 # детальний запит
                 payload_view = {"key": f"worker/Positions/View/{pos_id}", "meta": {}, "params": {"id": pos_id}}
                 detail_resp = requests.post(API_URL, json=payload_view, headers=headers, cookies=cookies)
+                detail_resp, cookies = refresh_cookies_if_needed(detail_resp, cookies, payload_view, headers)
 
-                if detail_resp.status_code != 200:
-                    #print(f"⚠️ pos_id={pos_id} API returned {detail_resp.status_code}")
+                detail_data = safe_json(detail_resp)
+                if not detail_data or not isinstance(detail_data, dict):
                     continue
 
-                if not detail_resp.text.strip():
-                    #print(f"⚠️ pos_id={pos_id} API returned empty body")
-                    continue
-
-                try:
-                    detail_data = detail_resp.json()
-                except ValueError:
-                    #print(f"⚠️ pos_id={pos_id} API returned non‑JSON: {detail_resp.text[:200]}")
-                    continue
-
-                # якщо це список або не dict — пропускаємо
-                if not isinstance(detail_data, dict):
-                    #print(f"⚠️ Skipping pos_id={pos_id}, API returned {type(detail_data)}")
-                    continue
-
-                # витягуємо wage
-                wage = (detail_data.get("result") or {}).get("wage") or {}
-                wage_hour = wage.get("hour")
-                wage_fix = wage.get("fix")
-
-                # витягуємо entities
+                # --- Entities ---
                 entities = detail_data.get("entities", {})
-                # якщо entities не dict — пропускаємо
                 if not isinstance(entities, dict):
-                    #print(f"⚠️ Skipping pos_id={pos_id}, entities is {type(entities)}")
                     continue
-                    
+
                 entity = entities.get("Position", {}).get(str(pos_id), {})
                 shift = entities.get("Shift", {}).get(str(entity.get("shift")), {})
                 company = entities.get("Company", {}).get(str(shift.get("company")), {})
                 profession = entities.get("Profession", {}).get(str(entity.get("profession")), {})
                 location = entities.get("Location", {}).get(str(entity.get("location")), {})
+
+                # wage
+                wage = (detail_data.get("result") or {}).get("wage") or {}
+                wage_hour = wage.get("hour")
+                wage_fix = wage.get("fix")
 
                 # координати
                 point = entity.get("point") or location.get("point") or {}
