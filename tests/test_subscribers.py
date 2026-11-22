@@ -78,8 +78,9 @@ class MatchingTests(unittest.TestCase):
         self.assertTrue(s.company_matches(10, None))
         self.assertTrue(s.company_matches(10, {10, 20}))
         self.assertFalse(s.company_matches(30, {10, 20}))
-        self.assertFalse(s.company_matches(555, None))      # виключена, як і в каналі
-        self.assertFalse(s.company_matches(555, {555}))
+        self.assertTrue(s.company_matches(555, None))       # 555 доступна в боті
+        self.assertTrue(s.company_matches(555, {555}))
+        self.assertFalse(s.company_matches(555, {10}))
 
 
 class TranslationTests(unittest.TestCase):
@@ -183,15 +184,31 @@ class BotFlowTests(unittest.TestCase):
         self.msg(100, "/company clear")
         self.msg(200, "/clear")
         self.assertEqual(sorted(self.recipients(company=30)), [100, 200])
-        self.assertEqual(self.recipients(company=555), [])
+        self.assertEqual(sorted(self.recipients(company=555)), [100, 200])
 
-    def test_company_add_unknown_and_excluded(self):
+    def test_company_add_unknown(self):
         self.msg(100, "/start")
         self.msg(100, "/company add 999")
         self.assertIn("не знайдено", self.last_text(100))
+
+    def test_company_555_available(self):
+        self.msg(100, "/start")
         self.msg(100, "/companies")
-        self.assertNotIn("Party", self.last_text(100))
-        self.assertIn("Alza", self.last_text(100))
+        self.assertIn("Party", self.last_text(100))
+        self.msg(100, "/company add 555")
+        self.assertIn("Party", self.last_text(100))
+        self.assertEqual(self.recipients(company=555), [100])
+        self.assertEqual(self.recipients(company=10), [])
+
+    def test_excluded_companies_env_still_works(self):
+        s.EXCLUDED_COMPANIES = {"555"}
+        try:
+            self.msg(100, "/start")
+            self.msg(100, "/companies")
+            self.assertNotIn("Party", self.last_text(100))
+            self.assertEqual(self.recipients(company=555), [])
+        finally:
+            s.EXCLUDED_COMPANIES = set()
 
     def test_pause_resume(self):
         self.msg(100, "/start")

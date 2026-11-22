@@ -15,7 +15,7 @@
 - ADMIN_CHAT_ID (або CHATBOT_ID) — твій особистий chat id; завжди адмін. Якщо адмін-каналу немає,
   сповіщення про нових підписників ідуть сюди;
 - ADMIN_LANG — мова сповіщень в адмін-канал: "uk" (за замовчуванням) або "cs";
-- SUBSCRIBER_EXCLUDED_COMPANIES — id компаній через кому, які підписники не отримують (за замовчуванням "555");
+- SUBSCRIBER_EXCLUDED_COMPANIES — id компаній через кому, які підписники не отримують (за замовчуванням жодної);
 - SUBSCRIBERS_ENABLED — "0", щоб вимкнути модуль повністю.
 """
 import html
@@ -39,7 +39,7 @@ ADMIN_CHAT_ID = (os.getenv("ADMIN_CHAT_ID") or os.getenv("CHATBOT_ID") or "").st
 ADMIN_CHANNEL_ID = (os.getenv("ADMIN_CHANNEL_ID") or "").strip()
 ADMIN_CACHE_SECONDS = 300
 EXCLUDED_COMPANIES = {
-    c.strip() for c in os.getenv("SUBSCRIBER_EXCLUDED_COMPANIES", "555").split(",") if c.strip()
+    c.strip() for c in os.getenv("SUBSCRIBER_EXCLUDED_COMPANIES", "").split(",") if c.strip()
 }
 ENABLED = os.getenv("SUBSCRIBERS_ENABLED", "1") != "0"
 
