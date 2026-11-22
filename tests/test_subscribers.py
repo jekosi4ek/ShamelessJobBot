@@ -82,6 +82,32 @@ class MatchingTests(unittest.TestCase):
         self.assertFalse(s.company_matches(555, {555}))
 
 
+class TranslationTests(unittest.TestCase):
+    def test_same_keys_in_both_languages(self):
+        self.assertEqual(set(s.TEXTS["uk"]), set(s.TEXTS["cs"]))
+
+    def test_detect_lang(self):
+        self.assertEqual(s.detect_lang("cs"), "cs")
+        self.assertEqual(s.detect_lang("sk"), "cs")
+        self.assertEqual(s.detect_lang("uk"), "uk")
+        self.assertEqual(s.detect_lang(None), "uk")
+
+    def test_migration_adds_lang_to_existing_table(self):
+        engine = sqlalchemy.create_engine("sqlite://")
+        with engine.begin() as c:  # таблиця в тому вигляді, як її створила попередня версія
+            c.execute(sqlalchemy.text(
+                "CREATE TABLE bot_users (chat_id BIGINT PRIMARY KEY, username VARCHAR(255), "
+                "first_name VARCHAR(255), is_active BOOLEAN NOT NULL, is_blocked BOOLEAN NOT NULL, "
+                "blocked_at DATETIME, created_at DATETIME, last_seen_at DATETIME)"))
+            c.execute(sqlalchemy.text("INSERT INTO bot_users (chat_id, is_active, is_blocked) VALUES (5, 1, 0)"))
+        s.init(engine, "TEST")
+        s.init(engine, "TEST")  # повторний старт не ламається
+        with s._Session() as db:
+            user = db.get(s.BotUser, 5)
+            self.assertIsNone(user.lang)
+            self.assertEqual(s.lang_of(user), "uk")
+
+
 class BotFlowTests(unittest.TestCase):
     def setUp(self):
         self.engine = sqlalchemy.create_engine("sqlite://")
@@ -112,11 +138,12 @@ class BotFlowTests(unittest.TestCase):
             return {"ok": True, "result": {"status": status}}
         return {"ok": True, "result": {}}
 
-    def msg(self, chat_id, text, first_name="Petr", username="petr"):
+    def msg(self, chat_id, text, first_name="Petr", username="petr", language_code=None):
+        sender = {"id": chat_id, "first_name": first_name, "username": username}
+        if language_code:
+            sender["language_code"] = language_code
         s.handle_update({"update_id": 1, "message": {
-            "chat": {"id": chat_id, "type": "private"},
-            "from": {"id": chat_id, "first_name": first_name, "username": username},
-            "text": text}})
+            "chat": {"id": chat_id, "type": "private"}, "from": sender, "text": text}})
 
     def last_text(self, chat_id):
         for method, p in reversed(self.sent):
@@ -234,6 +261,55 @@ class BotFlowTests(unittest.TestCase):
         text = self.last_text(ADMIN)
         self.assertIn("Підписники: 2", text)
         self.assertIn("&lt;b&gt;x&lt;/b&gt;", text)
+
+    def test_language_detected_from_telegram(self):
+        self.msg(100, "/start", language_code="cs")
+        self.assertIn("Ahoj!", self.last_text(100))
+        self.msg(200, "/start", language_code="uk")
+        self.assertIn("Привіт!", self.last_text(200))
+        self.msg(300, "/start", language_code="en")
+        self.assertIn("Привіт!", self.last_text(300))  # за замовчуванням українська
+
+    def test_language_buttons(self):
+        self.msg(100, "/start")
+        start_msg = [p for m, p in self.sent if m == "sendMessage" and p["chat_id"] == 100][-1]
+        self.assertIn("lang:cs", str(start_msg["reply_markup"]))  # новому користувачу одразу пропонуємо мову
+
+        s.handle_update({"update_id": 7, "callback_query": {
+            "id": "cb", "from": {"id": 100}, "data": "lang:cs",
+            "message": {"chat": {"id": 100}, "message_id": 3}}})
+        edited = [p for m, p in self.sent if m == "editMessageText"][-1]
+        self.assertIn("Jazyk změněn", edited["text"])
+
+        self.msg(100, "/set po-pá 17:00-23:00")
+        text = self.last_text(100)
+        self.assertIn("Moje nastavení", text)
+        self.assertIn("po 17:00-23:00", text)
+        self.msg(100, "/set xx 8-10")
+        self.assertIn("neznámý den", self.last_text(100))
+        self.msg(100, "/set čt 22:00-07:00")
+        self.assertIn("do rána následujícího dne", self.last_text(100))
+
+        self.msg(100, "/lang")
+        self.assertIn("Vyber jazyk", self.last_text(100))
+        s.handle_update({"update_id": 8, "callback_query": {
+            "id": "cb", "from": {"id": 100}, "data": "lang:uk", "message": {}}})
+        self.msg(100, "/schedule")
+        self.assertIn("Мої налаштування", self.last_text(100))
+        self.assertIn("пн 17:00-23:00", self.last_text(100))
+
+    def test_blocked_user_cannot_change_language(self):
+        self.msg(100, "/start")
+        self.msg(ADMIN, "/block 100")
+        s.handle_update({"update_id": 9, "callback_query": {
+            "id": "cb", "from": {"id": 100}, "data": "lang:cs", "message": {}}})
+        with s._Session() as db:
+            self.assertEqual(db.get(s.BotUser, 100).lang, "uk")
+
+    def test_admin_alert_language_is_admin_lang(self):
+        self.msg(100, "/start", language_code="cs")
+        alert = [p for m, p in self.sent if m == "sendMessage" and p["chat_id"] == "1"][0]
+        self.assertIn("Новий підписник", alert["text"])  # ADMIN_LANG = uk, незалежно від мови користувача
 
     def test_group_messages_ignored(self):
         s.handle_update({"update_id": 4, "message": {
