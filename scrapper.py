@@ -53,6 +53,13 @@ class Position(Base):
 
 Base.metadata.create_all(engine)
 
+# --- Особисті підписки (окремий модуль; якщо він не завантажиться, скрейпер працює як раніше) ---
+try:
+    import subscribers
+except Exception as e:
+    subscribers = None
+    print(f"⚠️ subscribers module not loaded: {e}")
+
 # --- Telegram ---
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID") #public channel, my bot: CHATBOT_ID in railway
@@ -306,6 +313,18 @@ def scrape():
                     # канал (приватний адмін-канал) отримує всі компанії, включно з 555
                     send_to_telegram(message, CHAT_ID)
 
+                    # особисті підписники: фільтр за днем/часом зміни і компанією, у фоновому потоці
+                    if subscribers:
+                        try:
+                            subscribers.enqueue(
+                                message,
+                                start_dt if start else None,
+                                end_dt if end else None,
+                                pretty["ID Компанії"],
+                            )
+                        except Exception as e:
+                            print(f"⚠️ subscribers.enqueue failed: {e}")
+
                 updates.append({
                     "date": sd_date,
                     "position_id": pretty["ID Позиції"],
@@ -388,6 +407,13 @@ def scrape():
 
                     # --- Запуск ---
 if __name__ == "__main__":
+    # фонові потоки для команд бота і розсилки підписникам
+    if subscribers:
+        try:
+            subscribers.start(engine, BOT_TOKEN)
+        except Exception as e:
+            print(f"⚠️ subscribers.start failed: {e}")
+
     # один раз при старті
     scrape()
 
