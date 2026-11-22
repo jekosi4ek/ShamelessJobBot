@@ -1,6 +1,9 @@
 # Використовуємо офіційний Python образ
 FROM python:3.11-slim
 
+# Вивід print() одразу йде в логи Railway, без буферизації
+ENV PYTHONUNBUFFERED=1
+
 # Встановлюємо системні залежності для Playwright
 RUN apt-get update && apt-get install -y \
     wget \
