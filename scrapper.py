@@ -272,9 +272,10 @@ def scrape():
                 }
 
                 # визначаємо статус
-                if prev_capacity is None and new_free_capacity > 0:
+                has_free = new_free_capacity is not None and new_free_capacity > 0  # API може повернути null
+                if prev_capacity is None and has_free:
                     status_text = "Nová změna"
-                elif prev_capacity == 0 and new_free_capacity > 0:
+                elif prev_capacity == 0 and has_free:
                     status_text = "Znovuotevřená změna"
                 else:
                     status_text = None  # не відправляємо повідомлення
